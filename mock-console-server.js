@@ -237,6 +237,54 @@ var addressSpaces = [
   }
 ];
 
+var addresses = [];
+
+function createAddress(addressSpace, addressName, plan)
+{
+  return {
+    Metadata: {
+      Name: addressSpace.Metadata.Name + "." + addressName,
+      Namespace: addressSpace.Metadata.Namespace,
+    },
+    Spec: {
+      Address: addressName,
+      Plan: plan,
+      Type: "queue"
+    },
+    Status: {
+      Phase: "Active"
+    }
+  };
+}
+
+addresses = addresses.concat(["ganymede",
+                "callisto",
+                "io",
+                "europa",
+                "amalthea",
+                "himalia",
+                "thebe",
+                "elara",
+                "pasiphae",
+                "metis",
+                "carme",
+                "sinope"].map(n =>
+    (createAddress(addressSpaces[0], n, availableAddressPlans.find(p => p.Metadata.Name === "standard-small-queue")))));
+
+addresses = addresses.concat(["titan",
+                "rhea",
+                "iapetus",
+                "dione",
+                "tethys",
+                "enceladus",
+                "mimas"].map(n =>
+    (createAddress(addressSpaces[1], n, availableAddressPlans.find(p => p.Metadata.Name === "standard-small-queue")))));
+
+addresses = addresses.concat(["phobos",
+                "deimous"].map(n =>
+    (createAddress(addressSpaces[2], n, availableAddressPlans.find(p => p.Metadata.Name === "standard-small-queue")))));
+
+
 // A map of functions which return data for the schema.
 const resolvers = {
   Query: {
@@ -270,12 +318,10 @@ const resolvers = {
         var knownNamespaces = availableNamespaces.map(p => p.Metadata.Name);
         throw `Unrecognised namespace '${args.namespace}', known ones are : ${knownNamespaces}`;
       }
-
       var as = addressSpaces.filter(as => args.namespace === undefined || args.namespace === as.Metadata.Namespace);
       var paginationBounds = calcLowerUpper(args.offset, args.first, as.length);
       var page = as.slice(paginationBounds.lower, paginationBounds.upper);
 
-      // console.log("addressSpaces %j", as);
       return {
         Total: as.length,
         AddressSpaces: page.map(as => ({
@@ -285,7 +331,36 @@ const resolvers = {
         }))
       };
     },
+    addresses:(parent, args, context, info) => {
 
+      if (args.namespace !== undefined &&
+          availableNamespaces.find(o => o.Metadata.Name === args.namespace) === undefined) {
+        var known = availableNamespaces.map(p => p.Metadata.Name);
+        throw `Unrecognised namespace '${args.namespace}', known ones are : ${known}`;
+      }
+
+      if (args.addressSpace !== undefined &&
+          addressSpaces.find(as => as.Metadata.Namespace === args.namespace && as.Metadata.Name === args.addressSpace) === undefined) {
+        var known = addressSpaces.filter(p => p.Metadata.Namespace === args.namespace).map(p => p.Metadata.Name);
+        throw `Unrecognised address space '${args.addressSpace}' within '${args.namespace}', known ones are : ${known}`;
+      }
+
+      var a = addresses.filter(a => {
+        return (args.namespace === undefined || args.namespace === a.Metadata.Namespace) && (
+            args.addressSpace === undefined || (args.namespace && a.Metadata.Name.startsWith(args.addressSpace + ".")));
+      });
+      var paginationBounds = calcLowerUpper(args.offset, args.first, a.length);
+      var page = a.slice(paginationBounds.lower, paginationBounds.upper);
+
+      return {
+        Total: a.length,
+        Addresses: page.map(a => ({
+          Resource: a,
+          Connections: [],
+          Metrics: []
+        }))
+      };
+    },
   }
 };
 

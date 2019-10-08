@@ -66,7 +66,7 @@ const typeDefs = gql`
 
   type AddressQueryResult {
     Total: Int!
-    Addresess: [Address!]!
+    Addresses: [Address!]!
   }
 
   type LinkQueryResult {
