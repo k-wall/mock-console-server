@@ -1,5 +1,5 @@
 {
-  Name: "mock-console-server",
+  "name": "mock-console-server",
   "version": "1.0.0",
   "description": "EnMasse mock console server",
   "main": "index.js",

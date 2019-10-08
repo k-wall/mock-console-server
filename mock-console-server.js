@@ -12,6 +12,37 @@ const typeDefs = require('./schema');
 //  }
 //`;
 
+function calcLowerUpper(offset, first, len) {
+  var lower = 0;
+  if (offset !== undefined && offset > 0) {
+    lower = Math.min(offset, len);
+  }
+  var upper = len;
+  if (first !== undefined && first > 0) {
+    upper = Math.min(lower + first, len);
+  }
+  return {lower, upper};
+}
+
+const availableNamespaces = [
+  {
+    Metadata: {
+      Name: "app1_ns",
+    },
+    Status: {
+      Phase: "Active"
+    }
+  },
+  {
+    Metadata: {
+      Name: "app2_ns",
+    },
+    Status: {
+      Phase: "Active"
+    }
+  }
+];
+
 const availableAddressPlans = [
   {
     Metadata: {
@@ -158,10 +189,60 @@ const availableAddressSpacePlans = [
   }
 ];
 
+var addressSpaces = [
+  {
+    Metadata: {
+      Name: "jupiter_as1",
+      Namespace: availableNamespaces[0].Metadata.Name,
+    },
+    Spec: {
+      Plan: availableAddressSpacePlans.find(p => p.Metadata.Name === "standard-small"),
+      Type: "standard"
+    },
+    Status: {
+      "isReady": true,
+      "messages": [],
+      "phase": "Active"
+    }
+  },
+  {
+    Metadata: {
+      Name: "saturn_as2",
+      Namespace: availableNamespaces[0].Metadata.Name,
+    },
+    Spec: {
+      Plan: availableAddressSpacePlans.find(p => p.Metadata.Name === "standard-medium"),
+      Type: "standard"
+    },
+    Status: {
+      "isReady": true,
+      "messages": [],
+      "phase": "Active"
+    }
+  },
+  {
+    Metadata: {
+      Name: "mars_as3",
+      Namespace: availableNamespaces[1].Metadata.Name,
+    },
+    Spec: {
+      Plan: availableAddressSpacePlans.find(p => p.Metadata.Name === "brokered-queue"),
+      Type: "brokered"
+    },
+    Status: {
+      "isReady": true,
+      "messages": [],
+      "phase": "Active"
+    }
+  }
+];
+
 // A map of functions which return data for the schema.
 const resolvers = {
   Query: {
     hello: () => 'world',
+
+    namespaces: () => availableNamespaces,
 
     addressTypes: () => (['queue', 'topic', 'subscription', 'multicast', 'anycast']),
     addressSpaceTypes: () => (['standard', 'brokered']),
@@ -181,7 +262,29 @@ const resolvers = {
         }
         return spacePlan.Spec.AddressPlans.sort(o => o.Spec.DisplayOrder);
       }
-    }
+    },
+    addressSpaces:(parent, args, context, info) => {
+
+      if (args.namespace !== undefined &&
+          availableNamespaces.find(o => o.Metadata.Name === args.namespace) === undefined) {
+        var knownNamespaces = availableNamespaces.map(p => p.Metadata.Name);
+        throw `Unrecognised namespace '${args.namespace}', known ones are : ${knownNamespaces}`;
+      }
+
+      var as = addressSpaces.filter(as => args.namespace === undefined || args.namespace === as.Metadata.Namespace);
+      var paginationBounds = calcLowerUpper(args.offset, args.first, as.length);
+      var page = as.slice(paginationBounds.lower, paginationBounds.upper);
+
+      // console.log("addressSpaces %j", as);
+      return {
+        Total: as.length,
+        AddressSpaces: page.map(as => ({
+          Resource: as,
+          Connections: [],
+          Metrics: []
+        }))
+      };
+    },
 
   }
 };
