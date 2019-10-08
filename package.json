@@ -1,0 +1,23 @@
+{
+  "name": "mock-console-server",
+  "version": "1.0.0",
+  "description": "EnMasse mock console server",
+  "main": "index.js",
+  "scripts": {
+    "start": "node mock-console-server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/k-wall/mock-console-server.git"
+  },
+  "author": "",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/k-wall/mock-console-server/issues"
+  },
+  "homepage": "https://github.com/k-wall/mock-console-server#readme",
+  "dependencies": {
+    "apollo-server": "^2.9.5",
+    "graphql": "^14.5.8"
+  }
+}
