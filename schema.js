@@ -95,7 +95,7 @@ const typeDefs = gql`
   #
 
   type AddressSpace_enmasse_io_v1beta1 {
-      ObjectMeta: ObjectMeta_v1!
+      Metadata: ObjectMeta_v1!
       Spec: AddressSpaceSpec_enmasse_io_v1beta1!
       Status: AddressSpaceStatus_enmasse_io_v1beta1
   }
@@ -116,7 +116,7 @@ const typeDefs = gql`
     Address:      String!
     AddressSpace: String!
     Type:         AddressType!
-    Plan:         AddressPlanK8s!
+    Plan:         AddressPlan_admin_enmasse_io_v1beta2!
     Topic:        String
   }
 
@@ -126,17 +126,17 @@ const typeDefs = gql`
   }
 
   type AddressK8s {
-    ObjectMeta: ObjectMeta_v1!
+    Metadata: ObjectMeta_v1!
     Spec: AddressSpecK8s!
     Status: AddressStatusK8s
   }
 
-  type AddressPlanK8s {
-      ObjectMeta: ObjectMeta_v1!
-      Spec: AddressPlanSpecK8s!
+  type AddressPlan_admin_enmasse_io_v1beta2 {
+      Metadata: ObjectMeta_v1!
+      Spec: AddressPlanSpec_admin_enmasse_io_v1beta2!
   }
 
-  type AddressPlanSpecK8s {
+  type AddressPlanSpec_admin_enmasse_io_v1beta2 {
       AddressType: AddressType!
       DisplayName: String!
       LongDescription: String!
@@ -145,7 +145,7 @@ const typeDefs = gql`
   }
 
   type AddressSpacePlan_admin_enmasse_io_v1beta2 {
-      ObjectMeta: ObjectMeta_v1!
+      Metadata: ObjectMeta_v1!
       Spec: AddressSpacePlanSpec_admin_enmasse_io_v1beta2!
   }
 
@@ -168,7 +168,7 @@ const typeDefs = gql`
   }
   
   type User_v1 {
-    ObjectMeta: ObjectMeta_v1!
+    Metadata: ObjectMeta_v1!
     Identities: [String!]!
     Groups: [String!]!
   }
@@ -181,9 +181,7 @@ const typeDefs = gql`
       addressSpacePlans(addressSpaceType: AddressSpaceType): [AddressSpacePlan_admin_enmasse_io_v1beta2!]!
       
       addressTypes: [AddressType!]!
-      
-      
-      
+      addressPlans(addressSpacePlan: String): [AddressPlan_admin_enmasse_io_v1beta2!]!
       
       
   }
