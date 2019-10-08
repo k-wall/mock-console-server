@@ -7,6 +7,11 @@ const typeDefs = gql`
     Value: String!
   }
 
+  enum AddressSpaceType {
+    standard
+    brokered
+  }
+
   enum AddressType {
     queue
     topic
@@ -65,6 +70,13 @@ const typeDefs = gql`
   }
 
   # Wrapper that encapulates the k8s object, metrics and links
+
+  type AddressSpace {
+      Resource: AddressSpace_enmasse_io_v1beta1!
+      Connections: [Connection!]!
+      Metrics: [Metric!]
+  }
+
   type Address {
     Resource: AddressK8s!
     Links: [Link!]
@@ -72,6 +84,33 @@ const typeDefs = gql`
     # Non root query faciliating pagination within this address's link(s).
     queryLinks(first: Int, offset: Int): LinkQueryResult!
   }
+
+  #
+  # Mirrors of Kubernetes types.  These follow the names and structure of the underlying
+  # Kubernetes object exactly.  We don't need to expose every field, just the ones that
+  # are important to the GraphQL interface.
+  #
+  # It is also possible to map types into GraphQL types (enums, other types etc) as is
+  # done below for the address.spec.plan and type fields.
+  #
+
+  type AddressSpace_enmasse_io_v1beta1 {
+      ObjectMeta: ObjectMeta_v1!
+      Spec: AddressSpaceSpec_enmasse_io_v1beta1!
+      Status: AddressSpaceStatus_enmasse_io_v1beta1
+  }
+
+  type AddressSpaceSpec_enmasse_io_v1beta1 {
+      Plan:      AddressSpacePlan_admin_enmasse_io_v1beta2!
+      Type:         AddressSpaceType!
+  }
+
+  type AddressSpaceStatus_enmasse_io_v1beta1 {
+      IsReady: Boolean!
+      Messages: [String!]
+  }
+
+  
 
   type AddressSpecK8s {
     Address:      String!
@@ -92,29 +131,33 @@ const typeDefs = gql`
     Status: AddressStatusK8s
   }
 
-  type AddressPlanSpecK8s {
-    AddressType: AddressType!
-    DisplayName: String!
-    LongDescription: String!
-    ShortDescription: String!
-    DisplayOrder: Int!
-  }
-
   type AddressPlanK8s {
-    ObjectMeta: ObjectMeta_v1!
-    Spec: AddressPlanSpecK8s!
+      ObjectMeta: ObjectMeta_v1!
+      Spec: AddressPlanSpecK8s!
   }
 
+  type AddressPlanSpecK8s {
+      AddressType: AddressType!
+      DisplayName: String!
+      LongDescription: String!
+      ShortDescription: String!
+      DisplayOrder: Int!
+  }
 
+  type AddressSpacePlan_admin_enmasse_io_v1beta2 {
+      ObjectMeta: ObjectMeta_v1!
+      Spec: AddressSpacePlanSpec_admin_enmasse_io_v1beta2!
+  }
 
-  #
-  # Mirrors of Kubernetes types.  These follow the names and structure of the underlying
-  # Kubernetes object exactly.  We don't need to expose every field, just the ones that
-  # are important to the GraphQL interface.
-  #
-  # It is also possible to map types into GraphQL types (enums, other types etc) as is
-  # done below for the address.spec.plan and type fields.
-  #
+  type AddressSpacePlanSpec_admin_enmasse_io_v1beta2 {
+      AddressPlans: [AddressSpacePlan_admin_enmasse_io_v1beta2!]!
+      AddressSpaceType: AddressSpaceType,
+      DisplayName: String!
+      LongDescription: String!
+      ShortDescription: String!
+      DisplayOrder: Int!
+  }
+
 
   type ObjectMeta_v1 {
     Annotations: [KeyValue!]!
@@ -134,6 +177,13 @@ const typeDefs = gql`
     hello: String
     "Returns the current logged on user"
     whoami: User_v1!
+      addressSpaceTypes: [AddressSpaceType!]!
+      addressSpacePlans(addressSpaceType: AddressSpaceType): [AddressSpacePlan_admin_enmasse_io_v1beta2!]!
+      
+      addressTypes: [AddressType!]!
+      
+      
+      
       
       
   }
