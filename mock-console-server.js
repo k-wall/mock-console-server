@@ -373,11 +373,17 @@ const resolvers = {
       var paginationBounds = calcLowerUpper(args.offset, args.first, as.length);
       var page = as.slice(paginationBounds.lower, paginationBounds.upper);
 
+      // function getConnections(as)
+      // {
+      //   var cons = as.Metadata.Uid in addressspace_connection ? addressspace_connection[as.Metadata.Uid] : [];
+      //   return {Total: cons.length, Connections: cons};
+      // }
+
       return {
         Total: as.length,
         AddressSpaces: page.map(as => ({
           Resource: as,
-          Connections: as.Metadata.Uid in addressspace_connection? addressspace_connection[as.Metadata.Uid] : [],
+          // Connections: getConnections(as),
           Metrics: []
         }))
       };
@@ -408,9 +414,21 @@ const resolvers = {
         Addresses: page.map(a => ({
           Resource: a,
           Metrics: []
+          // Connections provided by resolver
         }))
       };
     },
+  },
+
+  AddressSpace: {
+    Connections:(parent, args, context, info) => {
+      var as = parent.Resource;
+      var cons = as.Metadata.Uid in addressspace_connection ? addressspace_connection[as.Metadata.Uid] : [];
+      var paginationBounds = calcLowerUpper(args.offset, args.first, cons.length);
+      var page = cons.slice(paginationBounds.lower, paginationBounds.upper);
+      return {Total: cons.length, Connections: page};
+    }
+
   }
 };
 

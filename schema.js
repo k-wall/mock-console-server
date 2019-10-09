@@ -73,6 +73,11 @@ const typeDefs = gql`
     Addresses: [Address!]!
   }
 
+  type ConnectionQueryResult {
+    Total: Int!
+    Connections: [Connection!]!
+  }
+
   type LinkQueryResult {
     Total: Int!
     Links: [Link!]!
@@ -82,7 +87,7 @@ const typeDefs = gql`
 
   type AddressSpace {
     Resource: AddressSpace_enmasse_io_v1beta1!
-    Connections: [Connection!]!
+    Connections(first: Int, offset: Int): ConnectionQueryResult!
     Metrics: [Metric!]
   }
 
