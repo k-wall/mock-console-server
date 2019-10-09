@@ -6,7 +6,7 @@ The mock is not yet complete.  Currently following major features are missing:
 
 * address/connections links and their metrics
 * sorting
-* filter
+* filtering
 * mutations for create/patching/deleting addressess spaces and addresses
 * mutations for purging an address and closing a connection.
 
