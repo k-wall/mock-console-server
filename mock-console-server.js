@@ -438,31 +438,23 @@ const resolvers = {
       var cons;
       if (args.namespace === undefined && args.addressSpace === undefined) {
         cons = connections;
-      } else
-      {
+      } else {
         var uuids;
-        if (args.addressSpace === undefined)
-        {
+        if (args.addressSpace === undefined) {
           uuids = addressSpaces.filter(as => as.Metadata.Namespace === args.namespace)
               .map(as => as.Metadata.Uid);
-        }
-        else
-        {
+        } else {
           uuids = addressSpaces.filter(
               as => as.Metadata.Namespace === args.namespace && as.Metadata.Name === args.addressSpace)
               .map(as => as.Metadata.Uid);
         }
-        console.log("addressspace uids %j", uuids);
+
         var keptCons = [];
         uuids.map(uuid => addressspace_connection[uuid]).forEach(c => {
           keptCons = keptCons.concat(c);
         });
-        console.log("addressspace keptCons %j", keptCons);
-
         cons = connections.filter(c => keptCons.find(k => k === c));
-
       }
-
 
       var paginationBounds = calcLowerUpper(args.offset, args.first, cons.length);
       var page = cons.slice(paginationBounds.lower, paginationBounds.upper);
@@ -506,6 +498,25 @@ const resolvers = {
     }
 
   },
+  Connection: {
+    Metrics: (parent, args, context, info) => {
+      return [
+        {
+          Name: "enmasse_messages_in_total",
+          Type: "rate",
+          Value: Math.floor(Math.random() * 10),
+          Units: "msg/s"
+        },
+        {
+          Name: "enmasse_messages_in_total",
+          Type: "gauge",
+          Value: Math.floor(Math.random() * 10),
+          Units: "msg/s"
+        },
+      ];
+    }
+
+  }
 };
 
 const mocks = {
