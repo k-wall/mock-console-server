@@ -91,6 +91,7 @@ query all_addresses_for_addressspace_view {
 
 ## all_connections_for_addressspace_view
 
+```
 query all_connections_for_addressspace_view {
   connections(namespace: "app1_ns", addressSpace: "jupiter_as1") {
     Total
@@ -102,5 +103,6 @@ query all_connections_for_addressspace_view {
     }
   }
 }
+```
 
 
