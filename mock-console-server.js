@@ -198,12 +198,18 @@ const availableAddressSpacePlans = [
   }
 ];
 
+function getRandomCreationDate()
+{
+  return new Date(new Date().setDate(new Date().getDate() - Math.random() * 3));
+}
+
 var addressSpaces = [
   {
     Metadata: {
       Name: "jupiter_as1",
       Namespace: availableNamespaces[0].Metadata.Name,
-      Uid: uuidv1()
+      Uid: uuidv1(),
+      CreationTimestamp: getRandomCreationDate()
     },
     Spec: {
       Plan: availableAddressSpacePlans.find(p => p.Metadata.Name === "standard-small"),
@@ -219,7 +225,8 @@ var addressSpaces = [
     Metadata: {
       Name: "saturn_as2",
       Namespace: availableNamespaces[0].Metadata.Name,
-      Uid: uuidv1()
+      Uid: uuidv1(),
+      CreationTimestamp: getRandomCreationDate()
     },
     Spec: {
       Plan: availableAddressSpacePlans.find(p => p.Metadata.Name === "standard-medium"),
@@ -235,7 +242,8 @@ var addressSpaces = [
     Metadata: {
       Name: "mars_as3",
       Namespace: availableNamespaces[1].Metadata.Name,
-      Uid: uuidv1()
+      Uid: uuidv1(),
+      CreationTimestamp: getRandomCreationDate()
     },
     Spec: {
       Plan: availableAddressSpacePlans.find(p => p.Metadata.Name === "brokered-queue"),
@@ -295,6 +303,8 @@ function createAddress(addressSpace, addressName, plan)
     Metadata: {
       Name: addressSpace.Metadata.Name + "." + addressName,
       Namespace: addressSpace.Metadata.Namespace,
+      Uid: uuidv1(),
+      CreationTimestamp: getRandomCreationDate()
     },
     Spec: {
       Address: addressName,
@@ -373,12 +383,6 @@ const resolvers = {
       var paginationBounds = calcLowerUpper(args.offset, args.first, as.length);
       var page = as.slice(paginationBounds.lower, paginationBounds.upper);
 
-      // function getConnections(as)
-      // {
-      //   var cons = as.Metadata.Uid in addressspace_connection ? addressspace_connection[as.Metadata.Uid] : [];
-      //   return {Total: cons.length, Connections: cons};
-      // }
-
       return {
         Total: as.length,
         AddressSpaces: page.map(as => ({
@@ -418,6 +422,57 @@ const resolvers = {
         }))
       };
     },
+    connections:(parent, args, context, info) => {
+      if (args.namespace !== undefined &&
+          availableNamespaces.find(o => o.Metadata.Name === args.namespace) === undefined) {
+        var known = availableNamespaces.map(p => p.Metadata.Name);
+        throw `Unrecognised namespace '${args.namespace}', known ones are : ${known}`;
+      }
+
+      if (args.addressSpace !== undefined &&
+          addressSpaces.find(as => as.Metadata.Namespace === args.namespace && as.Metadata.Name === args.addressSpace) === undefined) {
+        var known = addressSpaces.filter(p => p.Metadata.Namespace === args.namespace).map(p => p.Metadata.Name);
+        throw `Unrecognised address space '${args.addressSpace}' within '${args.namespace}', known ones are : ${known}`;
+      }
+
+      var cons;
+      if (args.namespace === undefined && args.addressSpace === undefined) {
+        cons = connections;
+      } else
+      {
+        var uuids;
+        if (args.addressSpace === undefined)
+        {
+          uuids = addressSpaces.filter(as => as.Metadata.Namespace === args.namespace)
+              .map(as => as.Metadata.Uid);
+        }
+        else
+        {
+          uuids = addressSpaces.filter(
+              as => as.Metadata.Namespace === args.namespace && as.Metadata.Name === args.addressSpace)
+              .map(as => as.Metadata.Uid);
+        }
+        console.log("addressspace uids %j", uuids);
+        var keptCons = [];
+        uuids.map(uuid => addressspace_connection[uuid]).forEach(c => {
+          keptCons = keptCons.concat(c);
+        });
+        console.log("addressspace keptCons %j", keptCons);
+
+        cons = connections.filter(c => keptCons.find(k => k === c));
+
+      }
+
+
+      var paginationBounds = calcLowerUpper(args.offset, args.first, cons.length);
+      var page = cons.slice(paginationBounds.lower, paginationBounds.upper);
+
+      return {
+        Total: cons.length,
+        Connections: page
+      };
+
+    }
   },
 
   AddressSpace: {
@@ -427,9 +482,30 @@ const resolvers = {
       var paginationBounds = calcLowerUpper(args.offset, args.first, cons.length);
       var page = cons.slice(paginationBounds.lower, paginationBounds.upper);
       return {Total: cons.length, Connections: page};
+    },
+    Metrics: (parent, args, context, info) => {
+      var as = parent.Resource;
+      var cons = as.Metadata.Uid in addressspace_connection ? addressspace_connection[as.Metadata.Uid] : [];
+      var addrs = addresses.filter((a) => as.Metadata.Namespace === a.Metadata.Namespace &&
+                                          a.Metadata.Name.startsWith(as.Metadata.Name + "."));
+
+      return [
+        {
+          Name: "enmasse-connections",
+          Type: "gauge",
+          Value: cons.length,
+          Units: "connections"
+        },
+        {
+          Name: "enmasse-addresses",
+          Type: "gauge",
+          Value: addrs.length,
+          Units: "addresses"
+        },
+      ];
     }
 
-  }
+  },
 };
 
 const mocks = {

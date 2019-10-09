@@ -1,7 +1,8 @@
 const { gql } = require('apollo-server');
 
-const typeDefs = gql`
-
+const typeDefs = gql`    
+  scalar Date
+    
   type KeyValue {
     Key: String!
     Value: String!
@@ -176,7 +177,7 @@ const typeDefs = gql`
     Name: String!
     Namespace: String!
     ResourceVersion: String!
-    CreationTimestamp: String!
+    CreationTimestamp: Date!
     Uid: ID!
   }
 
@@ -196,29 +197,32 @@ const typeDefs = gql`
   }
 
   type Query {
-    hello: String
-    "Returns the current logged on user"
-    whoami: User_v1!
-    "Returns the namespaces available to this user"
-    namespaces : [Namespace_v1!]!
-    "Returns the address spaces type defined by the system"
-    addressSpaceTypes: [AddressSpaceType!]!
-    "Returns the address spaces plans defined by the system optionally filtereing for a single address space type"
-    addressSpacePlans(addressSpaceType: AddressSpaceType): [AddressSpacePlan_admin_enmasse_io_v1beta2!]!
+      hello: String
 
-    "Returns the address type defined by the system"
-    addressTypes: [AddressType!]!
-    "Returns the address plans defined by the system optionally filtering for a single address space plan"
-    addressPlans(addressSpacePlan: String): [AddressPlan_admin_enmasse_io_v1beta2!]!
+      "Returns the address spaces type defined by the system"
+      addressSpaceTypes: [AddressSpaceType!]!
+      "Returns the address spaces plans defined by the system optionally filtereing for a single address space type"
+      addressSpacePlans(addressSpaceType: AddressSpaceType): [AddressSpacePlan_admin_enmasse_io_v1beta2!]!
 
-    "Returns the address spaces available to this user,  optionally filtering for a single namespace"
-    addressSpaces(namespace: String, first: Int, offset: Int): AddressSpaceQueryResult
+      "Returns the address type defined by the system"
+      addressTypes: [AddressType!]!
+      "Returns the address plans defined by the system optionally filtering for a single address space plan"
+      addressPlans(addressSpacePlan: String): [AddressPlan_admin_enmasse_io_v1beta2!]!
 
-    "Returns the addresses available to this user,  optionally filtering for namespace or namespace/addressspace"
-    addresses(namespace: String, addressSpace: String, first: Int, offset: Int): AddressQueryResult
+      "Returns the current logged on user"
+      whoami: User_v1!
+      "Returns the namespaces visible to this user"
+      namespaces : [Namespace_v1!]!
+
+      "Returns the address spaces visible to this user,  optionally filtering for a single namespace"
+      addressSpaces(namespace: String, first: Int, offset: Int): AddressSpaceQueryResult
+
+      "Returns the addresses visible to this user,  optionally filtering for namespace or namespace/addressspace"
+      addresses(namespace: String, addressSpace: String, first: Int, offset: Int): AddressQueryResult
+
+      "Returns the connections visible to this user,  optionally filtering for namespace or namespace/addressspace"
+      connections(namespace: String, addressSpace: String, first: Int, offset: Int): ConnectionQueryResult
   }
-
-
 `;
 
 module.exports = typeDefs;
