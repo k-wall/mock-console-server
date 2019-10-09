@@ -1,3 +1,12 @@
+// TODO
+//
+// connections
+// links
+// mutations
+// metrics
+
+
+const uuidv1 = require('uuid/v1');
 const fs = require('fs')
 const path = require('path')
 const { ApolloServer, gql } = require('apollo-server');
@@ -194,6 +203,7 @@ var addressSpaces = [
     Metadata: {
       Name: "jupiter_as1",
       Namespace: availableNamespaces[0].Metadata.Name,
+      Uid: uuidv1()
     },
     Spec: {
       Plan: availableAddressSpacePlans.find(p => p.Metadata.Name === "standard-small"),
@@ -209,6 +219,7 @@ var addressSpaces = [
     Metadata: {
       Name: "saturn_as2",
       Namespace: availableNamespaces[0].Metadata.Name,
+      Uid: uuidv1()
     },
     Spec: {
       Plan: availableAddressSpacePlans.find(p => p.Metadata.Name === "standard-medium"),
@@ -224,6 +235,7 @@ var addressSpaces = [
     Metadata: {
       Name: "mars_as3",
       Namespace: availableNamespaces[1].Metadata.Name,
+      Uid: uuidv1()
     },
     Spec: {
       Plan: availableAddressSpacePlans.find(p => p.Metadata.Name === "brokered-queue"),
@@ -236,6 +248,44 @@ var addressSpaces = [
     }
   }
 ];
+
+var connections = [];
+
+connections = connections.concat(["juno",
+                                  "galileo:",
+                                  "ulysses",
+                                  "cassini",
+                                  "pioneer10",
+                                  "pioneer11",
+                                  "voyager1",
+                                  "voyager2",
+                                  "horizons",
+                                  "clipper",
+                                  "icy",
+                                  "dragonfly",
+                                  "mariner",
+                                  "pathfinder"
+].map(
+    (n) => (
+        {
+          Hostname: n + ":" + (Math.floor(Math.random() * 25536) + 40000),
+          ContainerId: uuidv1() + "",
+          Protocol: "amqp",
+          Properties: [],
+          Metrics: []
+        }
+
+    )
+));
+
+
+
+
+addressspace_connection = {};
+
+addressspace_connection[addressSpaces[0].Metadata.Uid] = connections.slice(0, 10);
+addressspace_connection[addressSpaces[1].Metadata.Uid] = connections.slice(5, 7).concat([connections[3], connections[11]]);
+addressspace_connection[addressSpaces[2].Metadata.Uid] = [connections[12], connections[13]];
 
 var addresses = [];
 
@@ -285,6 +335,7 @@ addresses = addresses.concat(["phobos",
     (createAddress(addressSpaces[2], n, availableAddressPlans.find(p => p.Metadata.Name === "standard-small-queue")))));
 
 
+
 // A map of functions which return data for the schema.
 const resolvers = {
   Query: {
@@ -326,7 +377,7 @@ const resolvers = {
         Total: as.length,
         AddressSpaces: page.map(as => ({
           Resource: as,
-          Connections: [],
+          Connections: as.Metadata.Uid in addressspace_connection? addressspace_connection[as.Metadata.Uid] : [],
           Metrics: []
         }))
       };
@@ -356,7 +407,6 @@ const resolvers = {
         Total: a.length,
         Addresses: page.map(a => ({
           Resource: a,
-          Connections: [],
           Metrics: []
         }))
       };

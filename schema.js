@@ -30,21 +30,25 @@ const typeDefs = gql`
     counter
     rate
   }
-
+  
+  enum Protocol {
+    amqp,
+    amqps
+  }
 
   type Metric {
     Name: String!
     Type: MetricType!
     Value: Float!
-    Units: String
+    Units: String!
   }
 
-
   type Connection {
-    hostname: String!
-    containerId: String!
-    protocol: String
-    properties: [KeyValue!]!
+    Hostname: String!
+    ContainerId: String!
+    Protocol: Protocol!
+    Properties: [KeyValue!]!
+    Metrics: [Metric!]!
   }
 
   type Link {
@@ -52,7 +56,7 @@ const typeDefs = gql`
     Connection: Connection!
     Address: String!
     Role: LinkRole!
-    Metrics: [Metric!]
+    Metrics: [Metric!]!
   }
 
   #
@@ -168,6 +172,7 @@ const typeDefs = gql`
     Namespace: String!
     ResourceVersion: String!
     CreationTimestamp: String!
+    Uid: ID!
   }
 
   type User_v1 {
