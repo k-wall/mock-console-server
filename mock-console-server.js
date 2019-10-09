@@ -259,8 +259,19 @@ var addressSpaces = [
 
 var connections = [];
 
+function createConnection(addressSpace, hostname) {
+  return {
+    AddressSpace: addressSpace,
+    Hostname: hostname + ":" + (Math.floor(Math.random() * 25536) + 40000),
+    ContainerId: uuidv1() + "",
+    Protocol: "amqp",
+    Properties: [],
+    Metrics: []
+  };
+}
+
 connections = connections.concat(["juno",
-                                  "galileo:",
+                                  "galileo",
                                   "ulysses",
                                   "cassini",
                                   "pioneer10",
@@ -271,31 +282,46 @@ connections = connections.concat(["juno",
                                   "clipper",
                                   "icy",
                                   "dragonfly",
-                                  "mariner",
+                                  "kosmos",
+                                  "mariner4",
+                                  "mariner5",
+                                  "zond2",
+                                  "mariner6",
+                                  "nozomi",
+                                  "rosetta",
+                                  "yinghuo1",
                                   "pathfinder"
 ].map(
     (n) => (
-        {
-          Hostname: n + ":" + (Math.floor(Math.random() * 25536) + 40000),
-          ContainerId: uuidv1() + "",
-          Protocol: "amqp",
-          Properties: [],
-          Metrics: []
-        }
-
+        createConnection(addressSpaces[0], n)
     )
 ));
 
+connections = connections.concat(["dragonfly"].map(
+    (n) => (
+        createConnection(addressSpaces[1], n)
+    )
+));
 
+connections = connections.concat(["kosmos",
+                                  "mariner4",
+                                  "mariner5",
+                                  "zond2",
+                                  "mariner6",
+                                  "nozomi",
+                                  "rosetta",
+                                  "yinghuo1",
+                                  "pathfinder"
+].map(
+    (n) => (
+        createConnection(addressSpaces[2], n)
+    )
+));
 
-
-addressspace_connection = {};
-
-addressspace_connection[addressSpaces[0].Metadata.Uid] = connections.slice(0, 10);
-addressspace_connection[addressSpaces[1].Metadata.Uid] = connections.slice(5, 7).concat([connections[3], connections[11]]);
-addressspace_connection[addressSpaces[2].Metadata.Uid] = [connections[12], connections[13]];
-
-var addresses = [];
+var addressspace_connection = {};
+addressSpaces.forEach(as => {
+  addressspace_connection[as.Metadata.Uid] = connections.filter((c) => c.AddressSpace.Metadata.Uid === as.Metadata.Uid);
+});
 
 function createAddress(addressSpace, addressName, plan)
 {
@@ -317,7 +343,7 @@ function createAddress(addressSpace, addressName, plan)
   };
 }
 
-addresses = addresses.concat(["ganymede",
+var addresses = ["ganymede",
                 "callisto",
                 "io",
                 "europa",
@@ -329,7 +355,7 @@ addresses = addresses.concat(["ganymede",
                 "metis",
                 "carme",
                 "sinope"].map(n =>
-    (createAddress(addressSpaces[0], n, availableAddressPlans.find(p => p.Metadata.Name === "standard-small-queue")))));
+    (createAddress(addressSpaces[0], n, availableAddressPlans.find(p => p.Metadata.Name === "standard-small-queue"))));
 
 addresses = addresses.concat(["titan",
                 "rhea",
@@ -344,7 +370,44 @@ addresses = addresses.concat(["phobos",
                 "deimous"].map(n =>
     (createAddress(addressSpaces[2], n, availableAddressPlans.find(p => p.Metadata.Name === "standard-small-queue")))));
 
+/*
+  type Link {
+    Name: String!
+    Connection: Connection!
+    Address: String!
+    Role: LinkRole!
+    Metrics: [Metric!]!
+  }
 
+
+
+ */
+
+function* makeAddrIter(namespace, addressspace) {
+  var filter = addresses.filter(a => a.Metadata.Namespace === namespace && a.Metadata.Name.startsWith(addressspace + "."));
+  var i = 0;
+  while(filter.length) {
+    var addr = filter[i++ % filter.length];
+    yield addr;
+  }
+}
+
+var addressItrs = {};
+addressSpaces.forEach((as) => {
+  addressItrs[as.Metadata.Uid] = makeAddrIter(as.Metadata.Namespace, as.Metadata.Name);
+});
+
+var links = [];
+connections.forEach(c => {
+  var addr = addressItrs[c.AddressSpace.Metadata.Uid].next().value;
+  links.push(
+      {
+        Name: uuidv1(),
+        Connection: c,
+        Address: addr.Metadata.Name,
+        Role: "sender",
+      });
+});
 
 // A map of functions which return data for the schema.
 const resolvers = {
@@ -498,17 +561,71 @@ const resolvers = {
     }
 
   },
-  Connection: {
+  Address: {
     Metrics: (parent, args, context, info) => {
+      var as = parent.Resource;
+      var cons = as.Metadata.Uid in addressspace_connection ? addressspace_connection[as.Metadata.Uid] : [];
+      var addrs = addresses.filter((a) => as.Metadata.Namespace === a.Metadata.Namespace &&
+                                          a.Metadata.Name.startsWith(as.Metadata.Name + "."));
+
       return [
         {
-          Name: "enmasse_messages_in_total",
+          Name: "enmasse_messages_stored",
+          Type: "gauge",
+          Value: Math.floor(Math.random() * 10),
+          Units: "messages"
+        },
+        {
+          Name: "enmasse-senders",
+          Type: "gauge",
+          Value: Math.floor(Math.random() * 3),
+          Units: "links"
+        },
+        {
+          Name: "enmasse-receivers",
+          Type: "gauge",
+          Value: Math.floor(Math.random() * 3),
+          Units: "links"
+        },
+        {
+          Name: "enmasse_messages_in",
           Type: "rate",
           Value: Math.floor(Math.random() * 10),
           Units: "msg/s"
         },
         {
-          Name: "enmasse_messages_in_total",
+          Name: "enmasse_messages_out",
+          Type: "gauge",
+          Value: Math.floor(Math.random() * 10),
+          Units: "msg/s"
+        },
+
+      ];
+    }
+  },
+  Connection: {
+    Links: (parent, args, context, info) => {
+      var con = parent;
+      var connlinks = links.filter((l) => l.Connection === con);
+
+      var paginationBounds = calcLowerUpper(args.offset, args.first, connlinks.length);
+      var page = connlinks.slice(paginationBounds.lower, paginationBounds.upper);
+
+      return {
+        Total: connlinks.length,
+        Links: page
+      };
+    },
+    Metrics: (parent, args, context, info) => {
+      return [
+        {
+          Name: "enmasse_messages_in",
+          Type: "rate",
+          Value: Math.floor(Math.random() * 10),
+          Units: "msg/s"
+        },
+        {
+          Name: "enmasse_messages_out",
           Type: "gauge",
           Value: Math.floor(Math.random() * 10),
           Units: "msg/s"

@@ -49,7 +49,8 @@ const typeDefs = gql`
     ContainerId: String!
     Protocol: Protocol!
     Properties: [KeyValue!]!
-    Metrics: [Metric!]!
+    Metrics: [Metric!]!,
+    Links: LinkQueryResult!
   }
 
   type Link {
