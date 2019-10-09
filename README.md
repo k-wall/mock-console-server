@@ -13,7 +13,8 @@ The mock is not yet complete.  Currently following major features are missing:
 
 # Running
 
-node mock-console-server.js
+
+`node mock-console-server.js`
 
 Navigate to http://localhost:4000/ to use the GraphQL playground.  This lets you explore the schema and run queries
 dynamically.
