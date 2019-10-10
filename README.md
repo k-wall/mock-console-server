@@ -6,9 +6,8 @@ The mock is not yet complete.  Currently following major features are missing:
 
 * sorting
 * filtering
-* mutations for create/patching/deleting addressess spaces and addresses
 * mutations for purging an address and closing a connection.
-
+* the structure of the object beneath connections and links feels ugly
 
 # Running
 
