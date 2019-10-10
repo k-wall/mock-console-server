@@ -117,7 +117,7 @@ const typeDefs = gql`
 
   type AddressSpaceSpec_enmasse_io_v1beta1 {
     Plan:      AddressSpacePlan_admin_enmasse_io_v1beta2!
-    Type:         AddressSpaceType!
+    Type:      AddressSpaceType!
   }
 
   type AddressSpaceStatus_enmasse_io_v1beta1 {
@@ -222,6 +222,46 @@ const typeDefs = gql`
 
       "Returns the connections visible to this user,  optionally filtering for namespace or namespace/addressspace"
       connections(namespace: String, addressSpace: String, first: Int, offset: Int): ConnectionQueryResult
+  }
+
+  #
+  # Inputs Types
+  #
+
+  input ObjectMeta_v1_Input {
+      Name: String!
+      Namespace: String!
+      ResourceVersion: String
+  }
+
+  input AddressSpaceSpec_enmasse_io_v1beta1_Input {
+      Type:         String!
+      Plan:         String!
+  }
+
+  input AddressSpace_enmasse_io_v1beta1_Input {
+      Metadata: ObjectMeta_v1_Input
+      Spec: AddressSpaceSpec_enmasse_io_v1beta1_Input
+  }
+
+  input AddressSpec_enmasse_io_v1beta1_Input {
+      Address:      String!
+      AddressSpace: String
+      Type:         String!
+      Plan:         String!
+      Topic:        String
+  }
+
+  input Address_enmasse_io_v1beta1_Input {
+      Metadata: ObjectMeta_v1_Input
+      Spec: AddressSpec_enmasse_io_v1beta1_Input
+  }
+
+  type Mutation {
+      createAddressSpace(input: AddressSpace_enmasse_io_v1beta1_Input!): AddressSpace_enmasse_io_v1beta1!
+      createAddress(input: Address_enmasse_io_v1beta1_Input!): Address_enmasse_io_v1beta1!
+#      patchAddress(input: ObjectMetaK8sInput!, jsonPatch: String!, patchType : String!): AddressK8s!
+#      deleteAddress(input: ObjectMetaK8sInput!): Boolean
   }
 `;
 

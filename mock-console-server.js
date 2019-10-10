@@ -203,58 +203,40 @@ function getRandomCreationDate()
   return new Date(new Date().setDate(new Date().getDate() - Math.random() * 3));
 }
 
+function createAddressSpace(name, namespace, plan, type)
+{
+  return {
+    Metadata: {
+      Name: name,
+      Namespace: namespace.Metadata.Name,
+      Uid: uuidv1(),
+      CreationTimestamp: getRandomCreationDate()
+    },
+    Spec: {
+      Plan: plan,
+      Type: type
+    },
+    Status: {
+      "isReady": true,
+      "messages": [],
+      "phase": "Active"
+    }
+  };
+}
+
 var addressSpaces = [
-  {
-    Metadata: {
-      Name: "jupiter_as1",
-      Namespace: availableNamespaces[0].Metadata.Name,
-      Uid: uuidv1(),
-      CreationTimestamp: getRandomCreationDate()
-    },
-    Spec: {
-      Plan: availableAddressSpacePlans.find(p => p.Metadata.Name === "standard-small"),
-      Type: "standard"
-    },
-    Status: {
-      "isReady": true,
-      "messages": [],
-      "phase": "Active"
-    }
-  },
-  {
-    Metadata: {
-      Name: "saturn_as2",
-      Namespace: availableNamespaces[0].Metadata.Name,
-      Uid: uuidv1(),
-      CreationTimestamp: getRandomCreationDate()
-    },
-    Spec: {
-      Plan: availableAddressSpacePlans.find(p => p.Metadata.Name === "standard-medium"),
-      Type: "standard"
-    },
-    Status: {
-      "isReady": true,
-      "messages": [],
-      "phase": "Active"
-    }
-  },
-  {
-    Metadata: {
-      Name: "mars_as3",
-      Namespace: availableNamespaces[1].Metadata.Name,
-      Uid: uuidv1(),
-      CreationTimestamp: getRandomCreationDate()
-    },
-    Spec: {
-      Plan: availableAddressSpacePlans.find(p => p.Metadata.Name === "brokered-queue"),
-      Type: "brokered"
-    },
-    Status: {
-      "isReady": true,
-      "messages": [],
-      "phase": "Active"
-    }
-  }
+  createAddressSpace("jupiter_as1",
+      availableNamespaces[0],
+      availableAddressSpacePlans.find(p => p.Metadata.Name === "standard-small"),
+      "standard"),
+  createAddressSpace("saturn_as2",
+      availableNamespaces[0],
+      availableAddressSpacePlans.find(p => p.Metadata.Name === "standard-medium"),
+      "standard"),
+  createAddressSpace("mars_as3",
+      availableNamespaces[1],
+      availableAddressSpacePlans.find(p => p.Metadata.Name === "brokered-queue"),
+      "brokered"),
 ];
 
 var connections = [];
@@ -370,19 +352,6 @@ addresses = addresses.concat(["phobos",
                 "deimous"].map(n =>
     (createAddress(addressSpaces[2], n, availableAddressPlans.find(p => p.Metadata.Name === "standard-small-queue")))));
 
-/*
-  type Link {
-    Name: String!
-    Connection: Connection!
-    Address: String!
-    Role: LinkRole!
-    Metrics: [Metric!]!
-  }
-
-
-
- */
-
 function* makeAddrIter(namespace, addressspace) {
   var filter = addresses.filter(a => a.Metadata.Namespace === namespace && a.Metadata.Name.startsWith(addressspace + "."));
   var i = 0;
@@ -411,6 +380,34 @@ connections.forEach(c => {
 
 // A map of functions which return data for the schema.
 const resolvers = {
+  Mutation: {
+    createAddressSpace: (parent, args) => {
+      var as = args.input;
+      var namespace = availableNamespaces.find(n => n.Metadata.Name === as.Metadata.Namespace);
+      if (namespace === undefined) {
+        var knownNamespaces = availableNamespaces.map(p => p.Metadata.Name);
+        throw `Unrecognised namespace '${as.Metadata.Namespace}', known ones are : ${knownNamespaces}`;
+      }
+
+      var spacePlan = availableAddressSpacePlans.find(o => o.Metadata.Name === as.Spec.Plan);
+      if (spacePlan === undefined) {
+        var knownPlansNames = availableAddressSpacePlans.map(p => p.Metadata.Name);
+        throw `Unrecognised address space plan '${as.Spec.Plan}', known ones are : ${knownPlansNames}`;
+      }
+      var type = as.Spec.Type;
+      if ( type !== 'brokered' && type !== 'standard') {
+        throw `Unrecognised address space type '${type}', known ones are : brokered, standard`;
+      }
+
+      if (addressSpaces.find(existing => as.Metadata.Name === existing.Metadata.Name && as.Metadata.Namespace === existing.Metadata.Namespace) !== undefined) {
+        throw `Address space with name  '${as.Metadata.Name} already exists in namespace ${as.Metadata.Namespace}`;
+      }
+
+      var addressSpace = createAddressSpace(as.Metadata.Name, namespace, spacePlan, type);
+      addressSpaces.push(addressSpace);
+      return addressSpace;
+    }
+  },
   Query: {
     hello: () => 'world',
 
