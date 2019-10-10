@@ -203,18 +203,37 @@ function getRandomCreationDate()
   return new Date(new Date().setDate(new Date().getDate() - Math.random() * 3));
 }
 
-function createAddressSpace(name, namespace, plan, type)
+function createAddressSpace(as)
 {
-  return {
+  var namespace = availableNamespaces.find(n => n.Metadata.Name === as.Metadata.Namespace);
+  if (namespace === undefined) {
+    var knownNamespaces = availableNamespaces.map(p => p.Metadata.Name);
+    throw `Unrecognised namespace '${as.Metadata.Namespace}', known ones are : ${knownNamespaces}`;
+  }
+
+  var spacePlan = availableAddressSpacePlans.find(o => o.Metadata.Name === as.Spec.Plan);
+  if (spacePlan === undefined) {
+    var knownPlansNames = availableAddressSpacePlans.map(p => p.Metadata.Name);
+    throw `Unrecognised address space plan '${as.Spec.Plan}', known ones are : ${knownPlansNames}`;
+  }
+  if (as.Spec.Type !== 'brokered' && as.Spec.Type !== 'standard') {
+    throw `Unrecognised address space type '${(as.Spec.Type)}', known ones are : brokered, standard`;
+  }
+
+  if (addressSpaces.find(existing => as.Metadata.Name === existing.Metadata.Name && as.Metadata.Namespace === existing.Metadata.Namespace) !== undefined) {
+    throw `Address space with name  '${as.Metadata.Name} already exists in namespace ${as.Metadata.Namespace}`;
+  }
+
+  var addressSpace = {
     Metadata: {
-      Name: name,
+      Name: as.Metadata.Name,
       Namespace: namespace.Metadata.Name,
       Uid: uuidv1(),
       CreationTimestamp: getRandomCreationDate()
     },
     Spec: {
-      Plan: plan,
-      Type: type
+      Plan: spacePlan,
+      Type: as.Spec.Type
     },
     Status: {
       "isReady": true,
@@ -222,22 +241,48 @@ function createAddressSpace(name, namespace, plan, type)
       "phase": "Active"
     }
   };
+
+  addressSpaces.push(addressSpace);
+  return addressSpace;
 }
 
-var addressSpaces = [
-  createAddressSpace("jupiter_as1",
-      availableNamespaces[0],
-      availableAddressSpacePlans.find(p => p.Metadata.Name === "standard-small"),
-      "standard"),
-  createAddressSpace("saturn_as2",
-      availableNamespaces[0],
-      availableAddressSpacePlans.find(p => p.Metadata.Name === "standard-medium"),
-      "standard"),
-  createAddressSpace("mars_as3",
-      availableNamespaces[1],
-      availableAddressSpacePlans.find(p => p.Metadata.Name === "brokered-queue"),
-      "brokered"),
-];
+var addressSpaces = [];
+
+createAddressSpace(
+    {
+      Metadata: {
+        Name: "jupiter_as1",
+        Namespace: availableNamespaces[0].Metadata.Name,
+      },
+      Spec: {
+        Plan: "standard-small",
+        Type: "standard"
+      }
+    });
+
+createAddressSpace(
+    {
+      Metadata: {
+        Name: "saturn_as2",
+        Namespace: availableNamespaces[0].Metadata.Name,
+      },
+      Spec: {
+        Plan: "standard-medium",
+        Type: "standard"
+      }
+    });
+
+createAddressSpace(
+    {
+      Metadata: {
+        Name: "mars_as2",
+        Namespace: availableNamespaces[1].Metadata.Name,
+      },
+      Spec: {
+        Plan: "brokered-single-broker",
+        Type: "brokered"
+      }
+    });
 
 var connections = [];
 
@@ -383,29 +428,7 @@ const resolvers = {
   Mutation: {
     createAddressSpace: (parent, args) => {
       var as = args.input;
-      var namespace = availableNamespaces.find(n => n.Metadata.Name === as.Metadata.Namespace);
-      if (namespace === undefined) {
-        var knownNamespaces = availableNamespaces.map(p => p.Metadata.Name);
-        throw `Unrecognised namespace '${as.Metadata.Namespace}', known ones are : ${knownNamespaces}`;
-      }
-
-      var spacePlan = availableAddressSpacePlans.find(o => o.Metadata.Name === as.Spec.Plan);
-      if (spacePlan === undefined) {
-        var knownPlansNames = availableAddressSpacePlans.map(p => p.Metadata.Name);
-        throw `Unrecognised address space plan '${as.Spec.Plan}', known ones are : ${knownPlansNames}`;
-      }
-      var type = as.Spec.Type;
-      if ( type !== 'brokered' && type !== 'standard') {
-        throw `Unrecognised address space type '${type}', known ones are : brokered, standard`;
-      }
-
-      if (addressSpaces.find(existing => as.Metadata.Name === existing.Metadata.Name && as.Metadata.Namespace === existing.Metadata.Namespace) !== undefined) {
-        throw `Address space with name  '${as.Metadata.Name} already exists in namespace ${as.Metadata.Namespace}`;
-      }
-
-      var addressSpace = createAddressSpace(as.Metadata.Name, namespace, spacePlan, type);
-      addressSpaces.push(addressSpace);
-      return addressSpace;
+      return createAddressSpace(as);
     }
   },
   Query: {
