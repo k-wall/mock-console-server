@@ -7,11 +7,11 @@
 
 
 const uuidv1 = require('uuid/v1');
+const traverse = require('traverse');
 const fs = require('fs')
 const path = require('path')
 const { ApolloServer, gql } = require('apollo-server');
 const typeDefs = require('./schema');
-
 
 // The GraphQL schema
 //const typeDefs = gql`
@@ -480,7 +480,7 @@ const resolvers = {
         Total: a.length,
         Addresses: page.map(a => ({
           Resource: a,
-          Metrics: []
+          // Metrics: []
           // Connections provided by resolver
         }))
       };
@@ -601,7 +601,20 @@ const resolvers = {
         },
 
       ];
-    }
+    },
+    Links: (parent, args, context, info) => {
+      var addr = parent.Resource;
+      var addrlinks = links.filter((l) => l.Connection.AddressSpace.Metadata.Namespace === addr.Metadata.Namespace &&   addr.Metadata.Name.startsWith(l.Connection.AddressSpace.Metadata.Name + "."));
+
+      var paginationBounds = calcLowerUpper(args.offset, args.first, addrlinks.length);
+      var page = addrlinks.slice(paginationBounds.lower, paginationBounds.upper);
+
+      return {
+        Total: addrlinks.length,
+        Links: page
+      };
+    },
+
   },
   Connection: {
     Links: (parent, args, context, info) => {
@@ -631,6 +644,83 @@ const resolvers = {
           Units: "msg/s"
         },
       ];
+    }
+  },
+  Link: {
+    Metrics: (parent, args, context, info) => {
+      var nodes = traverse(info.path).nodes().filter(n => typeof(n) === "object");
+      var is_addr_query = nodes.find(n =>  "key" in n && n["key"] === "Addresses") !== undefined;
+
+      if (is_addr_query) {
+
+        return [
+          {
+            Name: parent.Role === "sender" ? "enmasse_messages_in" : "enmasse_messages_out",
+            Type: "rate",
+            Value: Math.floor(Math.random() * 10),
+            Units: "msg/s"
+          },
+          {
+            Name: "enmasse_messages_backlog",
+            Type: "gauge",
+            Value: Math.floor(Math.random() * 15),
+            Units: "msg"
+          },
+        ];
+      } else {
+
+        var as = parent.Connection.AddressSpace;
+        if (as.Spec.Type === "brokered") {
+          return [
+            {
+              Name: "enmasse_deliveries",
+              Type: "counter",
+              Value: Math.floor(Math.random() * 10),
+              Units: "deliveries"
+            }
+          ];
+        } else {
+          return [
+            {
+              Name: "enmasse_deliveries",
+              Type: "counter",
+              Value: Math.floor(Math.random() * 10),
+              Units: "deliveries"
+            },
+            {
+              Name: "enmasse_rejected",
+              Type: "counter",
+              Value: Math.floor(Math.random() * 10),
+              Units: "deliveries"
+            },
+            {
+              Name: "enmasse_released",
+              Type: "counter",
+              Value: Math.floor(Math.random() * 10),
+              Units: "deliveries"
+            },
+            {
+              Name: "enmasse_modified",
+              Type: "counter",
+              Value: Math.floor(Math.random() * 10),
+              Units: "deliveries"
+            },
+            {
+              Name: "enmasse_presettled",
+              Type: "counter",
+              Value: Math.floor(Math.random() * 10),
+              Units: "deliveries"
+            },
+            {
+              Name: "enmasse_undelivered",
+              Type: "counter",
+              Value: Math.floor(Math.random() * 10),
+              Units: "deliveries"
+            },
+          ];
+
+        }
+      }
     }
 
   }

@@ -4,7 +4,6 @@ addresses of different types.
 
 The mock is not yet complete.  Currently following major features are missing:
 
-* address/connections links and their metrics
 * sorting
 * filtering
 * mutations for create/patching/deleting addressess spaces and addresses

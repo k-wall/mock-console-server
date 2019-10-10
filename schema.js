@@ -45,6 +45,7 @@ const typeDefs = gql`
   }
 
   type Connection {
+    AddressSpace: AddressSpace_enmasse_io_v1beta1!,
     Hostname: String!
     ContainerId: String!
     Protocol: Protocol!
@@ -95,10 +96,8 @@ const typeDefs = gql`
 
   type Address {
     Resource: Address_enmasse_io_v1beta1!
-    Links: [Link!]
+    Links(first: Int, offset: Int): LinkQueryResult!
     Metrics: [Metric!]
-    # Non root query faciliating pagination within this address's link(s).
-    queryLinks(first: Int, offset: Int): LinkQueryResult!
   }
 
   #
