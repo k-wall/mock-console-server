@@ -401,52 +401,104 @@ addressSpaces.forEach(as => {
   addressspace_connection[as.Metadata.Uid] = connections.filter((c) => c.AddressSpace.Metadata.Uid === as.Metadata.Uid);
 });
 
-function createAddress(addressSpace, addressName, plan)
-{
-  return {
+var addresses = [];
+
+function createAddress(addr) {
+  var namespace = availableNamespaces.find(n => n.Metadata.Name === addr.Metadata.Namespace);
+  if (namespace === undefined) {
+    var knownNamespaces = availableNamespaces.map(p => p.Metadata.Name);
+    throw `Unrecognised namespace '${addr.Metadata.Namespace}', known ones are : ${knownNamespaces}`;
+  }
+
+  var addressSpacesInNamespace = addressSpaces.filter(as => as.Metadata.Namespace === addr.Metadata.Namespace);
+  var addressSpace = addressSpacesInNamespace.find(as => as.Metadata.Name === addr.Spec.AddressSpace);
+  if (addressSpace === undefined) {
+    var addressspacenames = addressSpacesInNamespace.map(p => p.Metadata.Name);
+    throw `Unrecognised address space '${addr.Spec.AddressSpace}', known ones are : ${addressspacenames}`;
+  }
+
+  var plan = availableAddressPlans.find(o => o.Metadata.Name === addr.Spec.Plan);
+  if (plan === undefined) {
+    var knownPlansNames = availableAddressPlans.map(p => p.Metadata.Name);
+    throw `Unrecognised address plan '${addr.Spec.Plan}', known ones are : ${knownPlansNames}`;
+  }
+
+  var knownTypes = ['queue', 'topic', 'subscription', 'multicast', 'anycast'];
+  if (knownTypes.find(t => t === addr.Spec.Type) === undefined) {
+    throw `Unrecognised address type '${addr.Spec.Type}', known ones are : '${knownTypes}'`;
+  }
+
+  var prefix = addr.Spec.AddressSpace + ".";
+  if (!addr.Metadata.Name.startsWith(prefix)) {
+    throw `Address name must begin with '${prefix}`;
+  }
+
+  if (addresses.find(existing => addr.Metadata.Name === existing.Metadata.Name && addr.Metadata.Namespace === existing.Metadata.Namespace) !== undefined) {
+    throw `Address with name  '${addr.Metadata.Name} already exists in address space ${addr.Spec.AddressSpace}`;
+  }
+
+  var address = {
     Metadata: {
-      Name: addressSpace.Metadata.Name + "." + addressName,
-      Namespace: addressSpace.Metadata.Namespace,
+      Name: addr.Metadata.Name,
+      Namespace: addr.Metadata.Namespace,
       Uid: uuidv1(),
       CreationTimestamp: getRandomCreationDate()
     },
     Spec: {
-      Address: addressName,
+      Address: addr.Spec.Address,
       Plan: plan,
-      Type: "queue"
+      Type: addr.Spec.Type
     },
     Status: {
       Phase: "Active"
     }
   };
+  addresses.push(address);
+  return address;
 }
 
-var addresses = ["ganymede",
-                "callisto",
-                "io",
-                "europa",
-                "amalthea",
-                "himalia",
-                "thebe",
-                "elara",
-                "pasiphae",
-                "metis",
-                "carme",
-                "sinope"].map(n =>
-    (createAddress(addressSpaces[0], n, availableAddressPlans.find(p => p.Metadata.Name === "standard-small-queue"))));
+["ganymede", "callisto", "io", "europa", "amalthea", "himalia", "thebe", "elara", "pasiphae", "metis", "carme", "sinope"].map(n =>
+    (createAddress({
+      Metadata: {
+        Name: addressSpaces[0].Metadata.Name + "." + n,
+        Namespace: addressSpaces[0].Metadata.Namespace
+      },
+      Spec: {
+        Address: n,
+        AddressSpace: addressSpaces[0].Metadata.Name,
+        Plan: "standard-small-queue",
+        Type: "queue"
+      }
+    })));
 
-addresses = addresses.concat(["titan",
-                "rhea",
-                "iapetus",
-                "dione",
-                "tethys",
-                "enceladus",
-                "mimas"].map(n =>
-    (createAddress(addressSpaces[1], n, availableAddressPlans.find(p => p.Metadata.Name === "standard-small-queue")))));
 
-addresses = addresses.concat(["phobos",
-                "deimous"].map(n =>
-    (createAddress(addressSpaces[2], n, availableAddressPlans.find(p => p.Metadata.Name === "standard-small-queue")))));
+["titan", "rhea", "iapetus", "dione", "tethys", "enceladus", "mimas"].map(n =>
+    (createAddress({
+      Metadata: {
+        Name: addressSpaces[1].Metadata.Name + "." + n,
+        Namespace: addressSpaces[1].Metadata.Namespace
+      },
+      Spec: {
+        Address: n,
+        AddressSpace: addressSpaces[1].Metadata.Name,
+        Plan: "standard-small-queue",
+        Type: "queue"
+      }
+    })));
+
+["phobos", "deimous"].map(n =>
+    (createAddress({
+      Metadata: {
+        Name: addressSpaces[2].Metadata.Name + "." + n,
+        Namespace: addressSpaces[2].Metadata.Namespace
+      },
+      Spec: {
+        Address: n,
+        AddressSpace: addressSpaces[2].Metadata.Name,
+        Plan: "brokered-queue",
+        Type: "queue"
+      }
+    })));
 
 function* makeAddrIter(namespace, addressspace) {
   var filter = addresses.filter(a => a.Metadata.Namespace === namespace && a.Metadata.Name.startsWith(addressspace + "."));
@@ -486,7 +538,10 @@ const resolvers = {
     deleteAddressSpace: (parent, args) => {
       deleteAddressSpace(args.input);
       return true;
-    }
+    },
+    createAddress: (parent, args) => {
+      return createAddress(args.input);
+    },
   },
   Query: {
     hello: () => 'world',
