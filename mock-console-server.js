@@ -1,10 +1,3 @@
-// TODO
-//
-// connections
-// links
-// mutations
-// metrics
-
 
 const uuidv1 = require('uuid/v1');
 const traverse = require('traverse');
@@ -457,6 +450,53 @@ function createAddress(addr) {
   return address;
 }
 
+function patchAddress(metadata, jsonPatch, patchType) {
+  var index = addresses.findIndex(existing => metadata.Name === existing.Metadata.Name && metadata.Namespace === existing.Metadata.Namespace);
+  if (index < 0) {
+    throw `Address with name  '${metadata.Name}' in namespace ${metadata.Namespace} does not exist`;
+  }
+
+  var knownPatchTypes = ["application/json-patch+json", "application/merge-patch+json", "application/strategic-merge-patch+json"];
+  if (knownPatchTypes.find(p => p === patchType) === undefined) {
+    throw `Unsupported patch type '$patchType'`
+  } else if ( patchType !== 'application/json-patch+json') {
+    throw `Unsupported patch type '$patchType', this mock currently supports only 'application/json-patch+json'`;
+  }
+
+  var patch = JSON.parse(jsonPatch);
+  var current = addresses[index];
+  var patched = applyPatch(JSON.parse(JSON.stringify(current)) , patch);
+  if (patched.newDocument) {
+    var replacement = patched.newDocument;
+    if (replacement.Metadata === undefined || replacement.Metadata.Name !== current.Metadata.Name || replacement.Metadata.Namespace !== current.Metadata.Namespace || replacement.Metadata.Uid !== current.Metadata.Uid) {
+      throw `Immutable parts of resource (Address '${metadata.Name}' in namespace ${metadata.Namespace}) cannot be patched.`
+    }
+
+    if (replacement.Spec.Plan !== current.Spec.Plan) {
+      var replacementPlan = typeof(replacement.Spec.Plan) === "string" ? replacement.Spec.Plan : replacement.Spec.Plan.Metadata.Name;
+      var spacePlan = availableAddressPlans.find(o => o.Metadata.Name === replacementPlan);
+      if (spacePlan === undefined) {
+        var knownPlansNames = availableAddressPlans.map(p => p.Metadata.Name);
+        throw `Unrecognised address plan '${replacement.Spec.Plan}', known ones are : ${knownPlansNames}`;
+      }
+      replacement.Spec.Plan = spacePlan;
+    }
+
+    addresses[index] = replacement;
+    return replacement;
+  } else {
+    throw `Failed to patch address with name  '${metadata.Name}' in namespace ${metadata.Namespace}`
+  }
+}
+
+function deleteAddress(metadata) {
+  var index = addresses.findIndex(existing => metadata.Name === existing.Metadata.Name && metadata.Namespace === existing.Metadata.Namespace);
+  if (index < 0) {
+    throw `Address with name  '${metadata.Name}' in namespace ${metadata.Namespace} does not exist`;
+  }
+  addresses.splice(index, 1);
+}
+
 ["ganymede", "callisto", "io", "europa", "amalthea", "himalia", "thebe", "elara", "pasiphae", "metis", "carme", "sinope"].map(n =>
     (createAddress({
       Metadata: {
@@ -541,6 +581,13 @@ const resolvers = {
     },
     createAddress: (parent, args) => {
       return createAddress(args.input);
+    },
+    patchAddress: (parent, args) => {
+      return patchAddress(args.input, args.jsonPatch, args.patchType);
+    },
+    deleteAddress: (parent, args) => {
+      deleteAddress(args.input);
+      return true;
     },
   },
   Query: {

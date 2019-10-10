@@ -263,8 +263,8 @@ const typeDefs = gql`
       deleteAddressSpace(input: ObjectMeta_v1_Input!): Boolean
 
       createAddress(input: Address_enmasse_io_v1beta1_Input!): Address_enmasse_io_v1beta1!
-#      patchAddress(input: ObjectMetaK8sInput!, jsonPatch: String!, patchType : String!): AddressK8s!
-#      deleteAddress(input: ObjectMetaK8sInput!): Boolean
+      patchAddress(input: ObjectMeta_v1_Input!, jsonPatch: String!, patchType : String!): Address_enmasse_io_v1beta1!
+      deleteAddress(input: ObjectMeta_v1_Input!): Boolean
   }
 `;
 

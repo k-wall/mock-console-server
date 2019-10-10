@@ -140,6 +140,9 @@ args:
 
 ## Patch address space
 
+NOTE: patch operation requires a JSON patch of the resource to be updated. The patch itself
+is a stringify JSON list. The mock server currently implements RFC 6902 application/json-patch+json.
+
 ```
 mutation patch_as(
   $a: ObjectMeta_v1_Input!
@@ -189,5 +192,82 @@ args:
 ```
 {
   "a": {"Name": "wibx", "Namespace": "app1_ns" }
+}
+```
+
+
+## Create address
+
+```
+mutation create_addr($a:Address_enmasse_io_v1beta1_Input!) {
+  createAddress(input: $a) {
+    Metadata
+    {
+      Name
+      Namespace
+      Uid
+    }
+  }
+}
+```
+
+args:
+
+```
+{
+  "a": { "Metadata": {"Name": "jupiter_as1.wiby1", "Namespace": "app1_ns" },
+    "Spec": {"Type": "queue", "Plan": "standard-small-queue", "Address": "wiby1", "AddressSpace": "jupiter_as1"}}
+}
+```
+
+# Patch address
+
+```
+mutation patch_addr(
+  $a: ObjectMeta_v1_Input!
+  $jsonPatch: String!
+  $patchType: String!
+) {
+  patchAddress(input: $a, jsonPatch: $jsonPatch, patchType: $patchType) {
+    Metadata {
+      Name
+      Namespace
+      Uid
+      CreationTimestamp
+    }
+    Spec {
+      Type
+      Plan {
+        Metadata {
+          Name
+        }
+      }
+    }
+  }
+}
+```
+
+args:
+
+```
+{
+  "a": {"Name": "jupiter_as1.wiby1", "Namespace": "app1_ns" },
+"jsonPatch": "[{\"op\":\"replace\",\"path\":\"/Spec/Plan\",\"value\":\"standard-medium-queue\"}]",
+  "patchType": "application/json-patch+json"
+}
+```
+
+# Delete address
+
+```
+mutation delete_addr($a:ObjectMeta_v1_Input!) {
+  deleteAddress(input:$a)
+}
+```
+
+args:
+```
+{
+  "a": {"Name": "jupiter_as1.wiby1", "Namespace": "app1_ns" }
 }
 ```
