@@ -8,10 +8,11 @@
 
 const uuidv1 = require('uuid/v1');
 const traverse = require('traverse');
-const fs = require('fs')
-const path = require('path')
+const fs = require('fs');
+const path = require('path');
 const { ApolloServer, gql } = require('apollo-server');
 const typeDefs = require('./schema');
+const { applyPatch, compare } = require('fast-json-patch');
 
 // The GraphQL schema
 //const typeDefs = gql`
@@ -245,6 +246,45 @@ function createAddressSpace(as) {
   return addressSpace;
 }
 
+function patchAddressSpace(metadata, jsonPatch, patchType) {
+  var index = addressSpaces.findIndex(existing => metadata.Name === existing.Metadata.Name && metadata.Namespace === existing.Metadata.Namespace);
+  if (index < 0) {
+    throw `Address space with name  '${metadata.Name}' in namespace ${metadata.Namespace} does not exist`;
+  }
+
+  var knownPatchTypes = ["application/json-patch+json", "application/merge-patch+json", "application/strategic-merge-patch+json"];
+  if (knownPatchTypes.find(p => p === patchType) === undefined) {
+    throw `Unsupported patch type '$patchType'`
+  } else if ( patchType !== 'application/json-patch+json') {
+    throw `Unsupported patch type '$patchType', this mock currently supports only 'application/json-patch+json'`;
+  }
+
+  var patch = JSON.parse(jsonPatch);
+  var current = addressSpaces[index];
+  var patched = applyPatch(JSON.parse(JSON.stringify(current)) , patch);
+  if (patched.newDocument) {
+    var replacement = patched.newDocument;
+    if (replacement.Metadata === undefined || replacement.Metadata.Name !== current.Metadata.Name || replacement.Metadata.Namespace !== current.Metadata.Namespace || replacement.Metadata.Uid !== current.Metadata.Uid) {
+      throw `Immutable parts of resource (Address space '${metadata.Name}' in namespace ${metadata.Namespace}) cannot be patched.`
+    }
+
+    if (replacement.Spec.Plan !== current.Spec.Plan) {
+      var replacementPlan = typeof(replacement.Spec.Plan) === "string" ? replacement.Spec.Plan : replacement.Spec.Plan.Metadata.Name;
+      var spacePlan = availableAddressSpacePlans.find(o => o.Metadata.Name === replacementPlan);
+      if (spacePlan === undefined) {
+        var knownPlansNames = availableAddressSpacePlans.map(p => p.Metadata.Name);
+        throw `Unrecognised address space plan '${replacement.Spec.Plan}', known ones are : ${knownPlansNames}`;
+      }
+      replacement.Spec.Plan = spacePlan;
+    }
+
+    addressSpaces[index] = replacement;
+    return replacement;
+  } else {
+    throw `Failed to patch address space with name  '${metadata.Name}' in namespace ${metadata.Namespace}`
+  }
+}
+
 function deleteAddressSpace(metadata) {
   var index = addressSpaces.findIndex(existing => metadata.Name === existing.Metadata.Name && metadata.Namespace === existing.Metadata.Namespace);
   if (index < 0) {
@@ -291,6 +331,9 @@ createAddressSpace(
         Type: "brokered"
       }
     });
+
+
+console.log("patch : %j", compare(addressSpaces[0], addressSpaces[1]));
 
 var connections = [];
 
@@ -435,12 +478,13 @@ connections.forEach(c => {
 const resolvers = {
   Mutation: {
     createAddressSpace: (parent, args) => {
-      var as = args.input;
-      return createAddressSpace(as);
+      return createAddressSpace(args.input);
+    },
+    patchAddressSpace: (parent, args) => {
+      return patchAddressSpace(args.input, args.jsonPatch, args.patchType);
     },
     deleteAddressSpace: (parent, args) => {
-      var meta = args.input;
-      deleteAddressSpace(meta);
+      deleteAddressSpace(args.input);
       return true;
     }
   },

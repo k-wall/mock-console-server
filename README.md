@@ -106,3 +106,88 @@ query all_connections_for_addressspace_view {
 ```
 
 
+# Example Mutations
+
+## Create address space
+
+```
+mutation create_as($a:AddressSpace_enmasse_io_v1beta1_Input!) {
+  createAddressSpace(input:$a) {
+    Metadata {
+      Name
+      CreationTimestamp
+      Uid
+    }
+    Spec {
+      Plan {
+        Metadata {
+          Name
+        }
+      }
+    }
+  }
+}
+```
+
+args:
+
+```
+{
+  "a": { "Metadata": {"Name": "wibx", "Namespace": "app1_ns" },
+    "Spec": {"Type": "standard", "Plan": "standard-small"}}
+}
+```
+
+## Patch address space
+
+```
+mutation patch_as(
+  $a: ObjectMeta_v1_Input!
+  $jsonPatch: String!
+  $patchType: String!
+) {
+  patchAddressSpace(input: $a, jsonPatch: $jsonPatch, patchType: $patchType) {
+    Metadata {
+      Name
+      Uid
+    }
+    Spec {
+      Plan {
+        Metadata {
+          Name
+        }
+      }
+    }
+  }
+}
+```
+
+args: 
+
+```
+{
+  "a": {"Name": "wibx", "Namespace": "app1_ns" },
+"jsonPatch": "[{\"op\":\"replace\",\"path\":\"/Spec/Plan\",\"value\":\"standard-medium\"}]",
+  "patchType": "application/json-patch+json"
+  
+
+}
+```
+
+
+## Delete address space
+
+
+```
+mutation delete_as($a:ObjectMeta_v1_Input!) {
+  deleteAddressSpace(input:$a)
+}
+```
+
+args:
+
+```
+{
+  "a": {"Name": "wibx", "Namespace": "app1_ns" }
+}
+```
