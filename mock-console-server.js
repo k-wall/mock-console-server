@@ -203,8 +203,7 @@ function getRandomCreationDate()
   return new Date(new Date().setDate(new Date().getDate() - Math.random() * 3));
 }
 
-function createAddressSpace(as)
-{
+function createAddressSpace(as) {
   var namespace = availableNamespaces.find(n => n.Metadata.Name === as.Metadata.Namespace);
   if (namespace === undefined) {
     var knownNamespaces = availableNamespaces.map(p => p.Metadata.Name);
@@ -245,6 +244,15 @@ function createAddressSpace(as)
   addressSpaces.push(addressSpace);
   return addressSpace;
 }
+
+function deleteAddressSpace(metadata) {
+  var index = addressSpaces.findIndex(existing => metadata.Name === existing.Metadata.Name && metadata.Namespace === existing.Metadata.Namespace);
+  if (index < 0) {
+    throw `Address space with name  '${metadata.Name}' in namespace ${metadata.Namespace} does not exist`;
+  }
+  addressSpaces.splice(index, 1);
+}
+
 
 var addressSpaces = [];
 
@@ -429,6 +437,11 @@ const resolvers = {
     createAddressSpace: (parent, args) => {
       var as = args.input;
       return createAddressSpace(as);
+    },
+    deleteAddressSpace: (parent, args) => {
+      var meta = args.input;
+      deleteAddressSpace(meta);
+      return true;
     }
   },
   Query: {

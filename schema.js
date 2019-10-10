@@ -259,6 +259,7 @@ const typeDefs = gql`
 
   type Mutation {
       createAddressSpace(input: AddressSpace_enmasse_io_v1beta1_Input!): AddressSpace_enmasse_io_v1beta1!
+      deleteAddressSpace(input: ObjectMeta_v1_Input!): Boolean
       createAddress(input: Address_enmasse_io_v1beta1_Input!): Address_enmasse_io_v1beta1!
 #      patchAddress(input: ObjectMetaK8sInput!, jsonPatch: String!, patchType : String!): AddressK8s!
 #      deleteAddress(input: ObjectMetaK8sInput!): Boolean
