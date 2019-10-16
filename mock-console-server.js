@@ -6,6 +6,7 @@ const path = require('path');
 const { ApolloServer, gql } = require('apollo-server');
 const typeDefs = require('./schema');
 const { applyPatch, compare } = require('fast-json-patch');
+const { parser } = require('./filter_parser.js');
 
 // The GraphQL schema
 //const typeDefs = gql`
