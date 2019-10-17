@@ -51,7 +51,7 @@ const typeDefs = gql`
     Protocol: Protocol!
     Properties: [KeyValue!]!
     Metrics: [Metric!]!,
-    Links: LinkQueryResult!
+    Links(first: Int, offset: Int, filter: String, orderBy: String): LinkQueryResult!
   }
 
   type Link {
@@ -90,13 +90,14 @@ const typeDefs = gql`
 
   type AddressSpace {
     Resource: AddressSpace_enmasse_io_v1beta1!
-    Connections(first: Int, offset: Int): ConnectionQueryResult!
+    Connections(first: Int, offset: Int, filter: String, orderBy: String): ConnectionQueryResult!
+    Addresses(first: Int, offset: Int, filter: String, orderBy: String): AddressQueryResult!
     Metrics: [Metric!]
   }
 
   type Address {
     Resource: Address_enmasse_io_v1beta1!
-    Links(first: Int, offset: Int): LinkQueryResult!
+    Links(first: Int, offset: Int, filter: String, orderBy: String ): LinkQueryResult!
     Metrics: [Metric!]
   }
 
@@ -215,13 +216,13 @@ const typeDefs = gql`
       namespaces : [Namespace_v1!]!
 
       "Returns the address spaces visible to this user,  optionally filtering"
-      addressSpaces(first: Int, offset: Int, filter: String): AddressSpaceQueryResult
+      addressSpaces(first: Int, offset: Int, filter: String, orderBy: String): AddressSpaceQueryResult
 
       "Returns the addresses visible to this user,  optionally filtering"
-      addresses(first: Int, offset: Int, filter: String): AddressQueryResult
+      addresses(first: Int, offset: Int, filter: String, orderBy: String): AddressQueryResult
 
       "Returns the connections visible to this user,  optionally filtering"
-      connections(first: Int, offset: Int, filter: String): ConnectionQueryResult
+      connections(first: Int, offset: Int, filter: String, orderBy: String): ConnectionQueryResult
   }
 
   #

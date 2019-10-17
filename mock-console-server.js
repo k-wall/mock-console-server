@@ -7,6 +7,8 @@ const { ApolloServer, gql } = require('apollo-server');
 const typeDefs = require('./schema');
 const { applyPatch, compare } = require('fast-json-patch');
 const parser = require('./filter_parser.js');
+const jp = require('jsonpath');
+const firstBy = require('thenby');
 
 // The GraphQL schema
 //const typeDefs = gql`
@@ -15,7 +17,6 @@ const parser = require('./filter_parser.js');
 //    hello: String
 //  }
 //`;
-
 function calcLowerUpper(offset, first, len) {
   var lower = 0;
   if (offset !== undefined && offset > 0) {
@@ -568,6 +569,36 @@ connections.forEach(c => {
       });
 });
 
+function buildFilterer(filter) {
+  return filter ? parser.parse(filter) : {evaluate: () => true};
+}
+
+function buildOrderBy(sort_spec) {
+  if (sort_spec) {
+    return (r1, r2)  => {
+      var by = firstBy.firstBy((a, b) => 0);
+
+      sort_spec.split(/\s*,\s*/).forEach(spec => {
+        var match = /^`(.+)`\s*(asc|desc)?$/i.exec(spec);
+        var compmul = match.length > 2 && match[2] && match[2].toLowerCase() === "desc" ? -1 : 1;
+
+        var path = match[1];
+        var result1 = jp.query(r1, path, 1);
+        var result2 = jp.query(r2, path, 1);
+
+        var value1 = result1.length ? result1[0] : undefined;
+        var value2 = result2.length ? result2[0] : undefined;
+
+        by = by.thenBy((a,b) => ( value1 < value2 ) ? -1 * compmul : ( value1 > value2 ? compmul : 0 ));
+      });
+
+      return by(r1, r2);
+    };
+  } else {
+    return (r1, r2) => (a, b) => 0;
+  }
+}
+
 // A map of functions which return data for the schema.
 const resolvers = {
   Mutation: {
@@ -618,8 +649,9 @@ const resolvers = {
     },
     addressSpaces:(parent, args, context, info) => {
 
-      var filterer = args.filter ? parser.parse(args.filter) : { evaluate : () => true};
-      var as = addressSpaces.filter(as => filterer.evaluate(as));
+      var filterer = buildFilterer(args.filter);
+      var orderBy = buildOrderBy(args.orderBy);
+      var as = addressSpaces.filter(as => filterer.evaluate(as)).sort(orderBy);
       var paginationBounds = calcLowerUpper(args.offset, args.first, as.length);
       var page = as.slice(paginationBounds.lower, paginationBounds.upper);
 
@@ -632,8 +664,9 @@ const resolvers = {
     },
     addresses:(parent, args, context, info) => {
 
-      var filterer = args.filter ? parser.parse(args.filter) : { evaluate : () => true};
-      var a = addresses.filter(a => filterer.evaluate(a));
+      var filterer = buildFilterer(args.filter);
+      var orderBy = buildOrderBy(args.orderBy);
+      var a = addresses.filter(a => filterer.evaluate(a)).sort(orderBy);
       var paginationBounds = calcLowerUpper(args.offset, args.first, a.length);
       var page = a.slice(paginationBounds.lower, paginationBounds.upper);
 
@@ -645,8 +678,9 @@ const resolvers = {
       };
     },
     connections:(parent, args, context, info) => {
-      var filterer = args.filter ? parser.parse(args.filter) : { evaluate : () => true};
-      var cons = connections.filter(c => filterer.evaluate(c));
+      var filterer = buildFilterer(args.filter);
+      var orderBy = buildOrderBy(args.orderBy);
+      var cons = connections.filter(c => filterer.evaluate(c)).sort(orderBy);
 
       var paginationBounds = calcLowerUpper(args.offset, args.first, cons.length);
       var page = cons.slice(paginationBounds.lower, paginationBounds.upper);
@@ -661,11 +695,33 @@ const resolvers = {
 
   AddressSpace: {
     Connections:(parent, args, context, info) => {
+      var filterer = buildFilterer(args.filter);
+      var orderBy = buildOrderBy(args.orderBy);
+
       var as = parent.Resource;
       var cons = as.Metadata.Uid in addressspace_connection ? addressspace_connection[as.Metadata.Uid] : [];
+      cons = cons.filter(c => filterer.evaluate(c)).sort(orderBy);
+
       var paginationBounds = calcLowerUpper(args.offset, args.first, cons.length);
       var page = cons.slice(paginationBounds.lower, paginationBounds.upper);
       return {Total: cons.length, Connections: page};
+    },
+    Addresses:(parent, args, context, info) => {
+      var filterer = buildFilterer(args.filter);
+      var orderBy = buildOrderBy(args.orderBy);
+
+      var as = parent.Resource;
+
+      var addrs = addresses.filter(
+          a => as.Metadata.Namespace === a.Metadata.Namespace && a.Metadata.Name.startsWith(as.Metadata.Name + "."))
+          .filter(a => filterer.evaluate(a)).sort(orderBy);
+
+      var paginationBounds = calcLowerUpper(args.offset, args.first, addrs.length);
+      var page = addrs.slice(paginationBounds.lower, paginationBounds.upper);
+      return {Total: addrs.length,
+        Addresses: page.map(a => ({
+          Resource: a,
+        }))};
     },
     Metrics: (parent, args, context, info) => {
       var as = parent.Resource;
@@ -732,8 +788,12 @@ const resolvers = {
       ];
     },
     Links: (parent, args, context, info) => {
+      var filterer = buildFilterer(args.filter);
+      var orderBy = buildOrderBy(args.orderBy);
+
       var addr = parent.Resource;
-      var addrlinks = links.filter((l) => l.Connection.AddressSpace.Metadata.Namespace === addr.Metadata.Namespace &&   addr.Metadata.Name.startsWith(l.Connection.AddressSpace.Metadata.Name + "."));
+      var addrlinks = links.filter((l) => l.Connection.AddressSpace.Metadata.Namespace === addr.Metadata.Namespace &&   addr.Metadata.Name.startsWith(l.Connection.AddressSpace.Metadata.Name + "."))
+          .filter(l => filterer.evaluate(l)).sort(orderBy);
 
       var paginationBounds = calcLowerUpper(args.offset, args.first, addrlinks.length);
       var page = addrlinks.slice(paginationBounds.lower, paginationBounds.upper);
@@ -747,8 +807,11 @@ const resolvers = {
   },
   Connection: {
     Links: (parent, args, context, info) => {
+      var filterer = buildFilterer(args.filter);
+      var orderBy = buildOrderBy(args.orderBy);
+
       var con = parent;
-      var connlinks = links.filter((l) => l.Connection === con);
+      var connlinks = links.filter((l) => l.Connection === con).filter(l => filterer.evaluate(l)).sort(orderBy);
 
       var paginationBounds = calcLowerUpper(args.offset, args.first, connlinks.length);
       var page = connlinks.slice(paginationBounds.lower, paginationBounds.upper);

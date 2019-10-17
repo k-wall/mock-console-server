@@ -18,14 +18,34 @@ dynamically.
 
 # Filters
 
-Most queries accept a filter argument.  This allows filtering of the results.  The filter is specified by a
-SQL-92 style where clause.  JSON-path operands are supported thus allowing filtering of any leaf of the result
+Most queries accept a `filter` argument.  This allows filtering of the results.  The filter is specified by a
+SQL-92 style `where` clause.  JSON-path operands are supported thus allowing filtering of any leaf node of the result
 object.  A JSON-path operand in the expression are enclosed in backticks.
 
 e.g.
 
 ```
  `$.Spec.AddressSpace` = 'jupiter_as1' AND `$.Metadata.Namespace` = 'app1_ns'
+```
+
+# Sorting
+
+Most queries accept a `orderBy` argument.  This allows the sorting of the results by one or more fields.
+The sort clause is specified by a SQL-92 like `order by` clause with JSON-paths identifying the leaf node in the
+result that is to be subjected to the sort.  Sort order can be `ASC` (ascending - default) or `DESC` (descending).
+
+An ascending sort:
+
+```
+"`$.Metadata.Name`"
+```
+
+Multiple sort clauses are supported. Separate each clause with a comma.
+
+A two clause sort:
+
+```
+"`$.Spec.Type` ,`$.Metadata.Name` desc"
 ```
 
 # Example Queries
