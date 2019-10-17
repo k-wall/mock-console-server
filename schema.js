@@ -214,14 +214,14 @@ const typeDefs = gql`
       "Returns the namespaces visible to this user"
       namespaces : [Namespace_v1!]!
 
-      "Returns the address spaces visible to this user,  optionally filtering for a single namespace"
-      addressSpaces(namespace: String, first: Int, offset: Int): AddressSpaceQueryResult
+      "Returns the address spaces visible to this user,  optionally filtering"
+      addressSpaces(first: Int, offset: Int, filter: String): AddressSpaceQueryResult
 
-      "Returns the addresses visible to this user,  optionally filtering for namespace or namespace/addressspace"
-      addresses(namespace: String, addressSpace: String, first: Int, offset: Int): AddressQueryResult
+      "Returns the addresses visible to this user,  optionally filtering"
+      addresses(first: Int, offset: Int, filter: String): AddressQueryResult
 
-      "Returns the connections visible to this user,  optionally filtering for namespace or namespace/addressspace"
-      connections(namespace: String, addressSpace: String, first: Int, offset: Int): ConnectionQueryResult
+      "Returns the connections visible to this user,  optionally filtering"
+      connections(first: Int, offset: Int, filter: String): ConnectionQueryResult
   }
 
   #

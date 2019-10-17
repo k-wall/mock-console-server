@@ -6,7 +6,7 @@ const path = require('path');
 const { ApolloServer, gql } = require('apollo-server');
 const typeDefs = require('./schema');
 const { applyPatch, compare } = require('fast-json-patch');
-const { parser } = require('./filter_parser.js');
+const parser = require('./filter_parser.js');
 
 // The GraphQL schema
 //const typeDefs = gql`
@@ -440,6 +440,7 @@ function createAddress(addr) {
     },
     Spec: {
       Address: addr.Spec.Address,
+      AddressSpace: addr.Spec.AddressSpace,
       Plan: plan,
       Type: addr.Spec.Type
     },
@@ -617,12 +618,8 @@ const resolvers = {
     },
     addressSpaces:(parent, args, context, info) => {
 
-      if (args.namespace !== undefined &&
-          availableNamespaces.find(o => o.Metadata.Name === args.namespace) === undefined) {
-        var knownNamespaces = availableNamespaces.map(p => p.Metadata.Name);
-        throw `Unrecognised namespace '${args.namespace}', known ones are : ${knownNamespaces}`;
-      }
-      var as = addressSpaces.filter(as => args.namespace === undefined || args.namespace === as.Metadata.Namespace);
+      var filterer = args.filter ? parser.parse(args.filter) : { evaluate : () => true};
+      var as = addressSpaces.filter(as => filterer.evaluate(as));
       var paginationBounds = calcLowerUpper(args.offset, args.first, as.length);
       var page = as.slice(paginationBounds.lower, paginationBounds.upper);
 
@@ -630,29 +627,13 @@ const resolvers = {
         Total: as.length,
         AddressSpaces: page.map(as => ({
           Resource: as,
-          // Connections: getConnections(as),
-          Metrics: []
         }))
       };
     },
     addresses:(parent, args, context, info) => {
 
-      if (args.namespace !== undefined &&
-          availableNamespaces.find(o => o.Metadata.Name === args.namespace) === undefined) {
-        var known = availableNamespaces.map(p => p.Metadata.Name);
-        throw `Unrecognised namespace '${args.namespace}', known ones are : ${known}`;
-      }
-
-      if (args.addressSpace !== undefined &&
-          addressSpaces.find(as => as.Metadata.Namespace === args.namespace && as.Metadata.Name === args.addressSpace) === undefined) {
-        var known = addressSpaces.filter(p => p.Metadata.Namespace === args.namespace).map(p => p.Metadata.Name);
-        throw `Unrecognised address space '${args.addressSpace}' within '${args.namespace}', known ones are : ${known}`;
-      }
-
-      var a = addresses.filter(a => {
-        return (args.namespace === undefined || args.namespace === a.Metadata.Namespace) && (
-            args.addressSpace === undefined || (args.namespace && a.Metadata.Name.startsWith(args.addressSpace + ".")));
-      });
+      var filterer = args.filter ? parser.parse(args.filter) : { evaluate : () => true};
+      var a = addresses.filter(a => filterer.evaluate(a));
       var paginationBounds = calcLowerUpper(args.offset, args.first, a.length);
       var page = a.slice(paginationBounds.lower, paginationBounds.upper);
 
@@ -660,44 +641,12 @@ const resolvers = {
         Total: a.length,
         Addresses: page.map(a => ({
           Resource: a,
-          // Metrics: []
-          // Connections provided by resolver
         }))
       };
     },
     connections:(parent, args, context, info) => {
-      if (args.namespace !== undefined &&
-          availableNamespaces.find(o => o.Metadata.Name === args.namespace) === undefined) {
-        var known = availableNamespaces.map(p => p.Metadata.Name);
-        throw `Unrecognised namespace '${args.namespace}', known ones are : ${known}`;
-      }
-
-      if (args.addressSpace !== undefined &&
-          addressSpaces.find(as => as.Metadata.Namespace === args.namespace && as.Metadata.Name === args.addressSpace) === undefined) {
-        var known = addressSpaces.filter(p => p.Metadata.Namespace === args.namespace).map(p => p.Metadata.Name);
-        throw `Unrecognised address space '${args.addressSpace}' within '${args.namespace}', known ones are : ${known}`;
-      }
-
-      var cons;
-      if (args.namespace === undefined && args.addressSpace === undefined) {
-        cons = connections;
-      } else {
-        var uuids;
-        if (args.addressSpace === undefined) {
-          uuids = addressSpaces.filter(as => as.Metadata.Namespace === args.namespace)
-              .map(as => as.Metadata.Uid);
-        } else {
-          uuids = addressSpaces.filter(
-              as => as.Metadata.Namespace === args.namespace && as.Metadata.Name === args.addressSpace)
-              .map(as => as.Metadata.Uid);
-        }
-
-        var keptCons = [];
-        uuids.map(uuid => addressspace_connection[uuid]).forEach(c => {
-          keptCons = keptCons.concat(c);
-        });
-        cons = connections.filter(c => keptCons.find(k => k === c));
-      }
+      var filterer = args.filter ? parser.parse(args.filter) : { evaluate : () => true};
+      var cons = connections.filter(c => filterer.evaluate(c));
 
       var paginationBounds = calcLowerUpper(args.offset, args.first, cons.length);
       var page = cons.slice(paginationBounds.lower, paginationBounds.upper);

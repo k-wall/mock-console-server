@@ -5,7 +5,6 @@ addresses of different types.
 The mock is not yet complete.  Currently following major features are missing:
 
 * sorting
-* filtering
 * mutations for purging an address and closing a connection.
 * the structure of the object beneath connections and links feels ugly
 
@@ -16,6 +15,18 @@ The mock is not yet complete.  Currently following major features are missing:
 
 Navigate to http://localhost:4000/ to use the GraphQL playground.  This lets you explore the schema and run queries
 dynamically.
+
+# Filters
+
+Most queries accept a filter argument.  This allows filtering of the results.  The filter is specified by a
+SQL-92 style where clause.  JSON-path operands are supported thus allowing filtering of any leaf of the result
+object.  A JSON-path operand in the expression are enclosed in backticks.
+
+e.g.
+
+```
+ `$.Spec.AddressSpace` = 'jupiter_as1' AND `$.Metadata.Namespace` = 'app1_ns'
+```
 
 # Example Queries
 
@@ -56,7 +67,7 @@ query all_address_spaces {
 
 ```
 query all_addresses_for_addressspace_view {
-  addresses(namespace: "app1_ns", addressSpace: "jupiter_as1") {
+  addresses(filter:"`$.Spec.AddressSpace` = 'jupiter_as1' AND `$.Metadata.Namespace` = 'app1_ns'") {
     Total
     Addresses {
       Resource {
@@ -92,7 +103,7 @@ query all_addresses_for_addressspace_view {
 
 ```
 query all_connections_for_addressspace_view {
-  connections(namespace: "app1_ns", addressSpace: "jupiter_as1") {
+  connections(filter:"`$.AddressSpace.Metadata.Name` = 'jupiter_as1' AND `$.AddressSpace.Metadata.Namespace` = 'app1_ns'") {
     Total
     Connections {
       Hostname

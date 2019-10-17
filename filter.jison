@@ -8,7 +8,6 @@
 [\w]?\'(\\.|[^\\'])*\'    return 'STRING_LITERAL_S';
 [\w]?\`(\\.|[^\\`])*\`    return 'JSON_PATH';
 
-/*"__"                      return 'JSON_PATH';*/
 "("                       return 'LPAREN';
 ")"                       return 'RPAREN';
 

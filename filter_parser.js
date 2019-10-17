@@ -62,7 +62,7 @@ parser.yy = {
                 evaluate : function(target) {
                     var lhs = x.evaluate(target);
                     var rhs = escapeStringRegexp(y.evaluate(target));
-                    // TODO escape search synbols
+                    // TODO escape quote symbols
                     var re = new RegExp("^" + rhs.replace(/%/g, ".*").replace(/_/g, ".") + "$");
                     var res = re.exec(lhs);
                     return res !== null;
