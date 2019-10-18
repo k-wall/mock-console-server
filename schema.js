@@ -1,272 +1,278 @@
 const { gql } = require('apollo-server');
 
-const typeDefs = gql`    
-  scalar Date
-    
-  type KeyValue {
-    Key: String!
-    Value: String!
-  }
+const typeDefs = gql`
+    scalar Date
 
-  enum AddressSpaceType {
-    standard
-    brokered
-  }
+    type KeyValue {
+        Key: String!
+        Value: String!
+    }
 
-  enum AddressType {
-    queue
-    topic
-    subscription
-    multicast
-    anycast
-  }
+    enum AddressSpaceType {
+        standard
+        brokered
+    }
 
-  enum LinkRole {
-    sender,
-    receiver
-  }
+    enum AddressType {
+        queue
+        topic
+        subscription
+        multicast
+        anycast
+    }
 
-  enum MetricType {
-    gauge
-    counter
-    rate
-  }
-  
-  enum Protocol {
-    amqp,
-    amqps
-  }
+    enum LinkRole {
+        sender,
+        receiver
+    }
 
-  type Metric {
-    Name: String!
-    Type: MetricType!
-    Value: Float!
-    Units: String!
-  }
+    enum MetricType {
+        gauge
+        counter
+        rate
+    }
 
-  type Connection {
-    AddressSpace: AddressSpace_enmasse_io_v1beta1!,
-    Hostname: String!
-    ContainerId: String!
-    Protocol: Protocol!
-    Properties: [KeyValue!]!
-    Metrics: [Metric!]!,
-    Links(first: Int, offset: Int, filter: String, orderBy: String): LinkQueryResult!
-  }
+    enum Protocol {
+        amqp,
+        amqps
+    }
 
-  type Link {
-    Name: String!
-    Connection: Connection!
-    Address: String!
-    Role: LinkRole!
-    Metrics: [Metric!]!
-  }
+    type Metric_consoleapi_enmasse_io_v1beta1 {
+        Name: String!
+        Type: MetricType!
+        Value: Float!
+        Units: String!
+    }
 
-  #
-  #  Types used to facilitate the paginated model queries
-  #
+    type Connection_consoleapi_enmasse_io_v1beta1 {
+        Metadata: ObjectMeta_v1!
+        Spec: ConnectionSpec_consoleapi_enmasse_io_v1beta1!
 
-  type AddressSpaceQueryResult {
-    Total: Int!
-    AddressSpaces: [AddressSpace!]!
-  }
+        Metrics: [Metric_consoleapi_enmasse_io_v1beta1!]!,
+        Links(first: Int, offset: Int, filter: String, orderBy: String): LinkQueryResult!
+    }
 
-  type AddressQueryResult {
-    Total: Int!
-    Addresses: [Address!]!
-  }
+    type ConnectionSpec_consoleapi_enmasse_io_v1beta1 {
+        AddressSpace: AddressSpace_consoleapi_enmasse_io_v1beta1!
+        Hostname: String!
+        ContainerId: String!
+        Protocol: Protocol!
+        Properties: [KeyValue!]!
+    }
 
-  type ConnectionQueryResult {
-    Total: Int!
-    Connections: [Connection!]!
-  }
+    type Link_consoleapi_enmasse_io_v1beta1 {
+        Metadata: ObjectMeta_v1!
+        Spec: LinkSpec_consoleapi_enmasse_io_v1beta1!
+        Metrics: [Metric_consoleapi_enmasse_io_v1beta1!]!,
+    }
 
-  type LinkQueryResult {
-    Total: Int!
-    Links: [Link!]!
-  }
+    type LinkSpec_consoleapi_enmasse_io_v1beta1 {
+        Connection: Connection_consoleapi_enmasse_io_v1beta1!
+        Address: String!
+        Role: LinkRole!
+        Metrics: [Metric_consoleapi_enmasse_io_v1beta1!]!
+    }
 
-  # Wrapper that encapulates the k8s object, metrics and links
+    #
+    #  Types used to facilitate the paginated model queries
+    #
 
-  type AddressSpace {
-    Resource: AddressSpace_enmasse_io_v1beta1!
-    Connections(first: Int, offset: Int, filter: String, orderBy: String): ConnectionQueryResult!
-    Addresses(first: Int, offset: Int, filter: String, orderBy: String): AddressQueryResult!
-    Metrics: [Metric!]
-  }
+    type AddressSpaceQueryResult_consoleapi_enmasse_io_v1beta1 {
+        Total: Int!
+        AddressSpaces: [AddressSpace_consoleapi_enmasse_io_v1beta1!]!
+    }
 
-  type Address {
-    Resource: Address_enmasse_io_v1beta1!
-    Links(first: Int, offset: Int, filter: String, orderBy: String ): LinkQueryResult!
-    Metrics: [Metric!]
-  }
+    type AddressQueryResult_consoleapi_enmasse_io_v1beta1 {
+        Total: Int!
+        Addresses: [Address_consoleapi_enmasse_io_v1beta1!]!
+    }
 
-  #
-  # Mirrors of Kubernetes types.  These follow the names and structure of the underlying
-  # Kubernetes object exactly.  We don't need to expose every field, just the ones that
-  # are important to the GraphQL interface.
-  #
-  # It is also possible to map types into GraphQL types (enums, other types etc) as is
-  # done below for the address.spec.plan and type fields.
-  #
+    type ConnectionQueryResult_consoleapi_enmasse_io_v1beta1 {
+        Total: Int!
+        Connections: [Connection_consoleapi_enmasse_io_v1beta1!]!
+    }
 
-  type AddressSpace_enmasse_io_v1beta1 {
-    Metadata: ObjectMeta_v1!
-    Spec: AddressSpaceSpec_enmasse_io_v1beta1!
-    Status: AddressSpaceStatus_enmasse_io_v1beta1
-  }
+    type LinkQueryResult {
+        Total: Int!
+        Links: [Link_consoleapi_enmasse_io_v1beta1!]!
+    }
 
-  type AddressSpaceSpec_enmasse_io_v1beta1 {
-    Plan:      AddressSpacePlan_admin_enmasse_io_v1beta2!
-    Type:      AddressSpaceType!
-  }
+    #
+    # Mirrors of Kubernetes types.  These follow the names and structure of the underlying
+    # Kubernetes object exactly.  We don't need to expose every field, just the ones that
+    # are important to the GraphQL interface.
+    #
+    # It is also possible to map types into GraphQL types (enums, other types etc) as is
+    # done below for the address.spec.plan and type fields.
+    #
 
-  type AddressSpaceStatus_enmasse_io_v1beta1 {
-    IsReady: Boolean!
-    Messages: [String!]
-  }
+    type AddressSpace_consoleapi_enmasse_io_v1beta1 {
+        Metadata: ObjectMeta_v1!
+        Spec: AddressSpaceSpec_enmasse_io_v1beta1!
+        Status: AddressSpaceStatus_enmasse_io_v1beta1
+        Connections(first: Int, offset: Int, filter: String, orderBy: String): ConnectionQueryResult_consoleapi_enmasse_io_v1beta1!
+        Addresses(first: Int, offset: Int, filter: String, orderBy: String): AddressQueryResult_consoleapi_enmasse_io_v1beta1!
+        Metrics: [Metric_consoleapi_enmasse_io_v1beta1!]
+    }
 
-  type AddressSpec_enmasse_io_v1beta1 {
-    Address:      String!
-    AddressSpace: String!
-    Type:         AddressType!
-    Plan:         AddressPlan_admin_enmasse_io_v1beta2!
-    Topic:        String
-  }
+    type AddressSpaceSpec_enmasse_io_v1beta1 {
+        Plan:      AddressSpacePlan_admin_enmasse_io_v1beta2!
+        Type:      AddressSpaceType!
+    }
 
-  type AddressStatus_enmasse_io_v1beta1 {
-    IsReady: Boolean!
-    Messages: [String!]
-  }
+    type AddressSpaceStatus_enmasse_io_v1beta1 {
+        IsReady: Boolean!
+        Messages: [String!]
+    }
 
-  type Address_enmasse_io_v1beta1 {
-    Metadata: ObjectMeta_v1!
-    Spec: AddressSpec_enmasse_io_v1beta1!
-    Status: AddressStatus_enmasse_io_v1beta1
-  }
+    type AddressSpec_enmasse_io_v1beta1 {
+        Address:      String!
+        AddressSpace: String!
+        Type:         AddressType!
+        Plan:         AddressPlan_admin_enmasse_io_v1beta2!
+        Topic:        String
+    }
 
-  type AddressPlan_admin_enmasse_io_v1beta2 {
-    Metadata: ObjectMeta_v1!
-    Spec: AddressPlanSpec_admin_enmasse_io_v1beta2!
-  }
+    type AddressStatus_enmasse_io_v1beta1 {
+        IsReady: Boolean!
+        Messages: [String!]
+    }
 
-  type AddressPlanSpec_admin_enmasse_io_v1beta2 {
-    AddressType: AddressType!
-    DisplayName: String!
-    LongDescription: String!
-    ShortDescription: String!
-    DisplayOrder: Int!
-  }
+    type Address_consoleapi_enmasse_io_v1beta1 {
+        Metadata: ObjectMeta_v1!
+        Spec: AddressSpec_enmasse_io_v1beta1!
+        Status: AddressStatus_enmasse_io_v1beta1
 
-  type AddressSpacePlan_admin_enmasse_io_v1beta2 {
-    Metadata: ObjectMeta_v1!
-    Spec: AddressSpacePlanSpec_admin_enmasse_io_v1beta2!
-  }
+        Links(first: Int, offset: Int, filter: String, orderBy: String ): LinkQueryResult!
+        Metrics: [Metric_consoleapi_enmasse_io_v1beta1!]
+    }
 
-  type AddressSpacePlanSpec_admin_enmasse_io_v1beta2 {
-    AddressPlans: [AddressSpacePlan_admin_enmasse_io_v1beta2!]!
-    AddressSpaceType: AddressSpaceType,
-    DisplayName: String!
-    LongDescription: String!
-    ShortDescription: String!
-    DisplayOrder: Int!
-  }
+    type AddressPlan_admin_enmasse_io_v1beta2 {
+        Metadata: ObjectMeta_v1!
+        Spec: AddressPlanSpec_admin_enmasse_io_v1beta2!
+    }
+
+    type AddressPlanSpec_admin_enmasse_io_v1beta2 {
+        AddressType: AddressType!
+        DisplayName: String!
+        LongDescription: String!
+        ShortDescription: String!
+        DisplayOrder: Int!
+    }
+
+    type AddressSpacePlan_admin_enmasse_io_v1beta2 {
+        Metadata: ObjectMeta_v1!
+        Spec: AddressSpacePlanSpec_admin_enmasse_io_v1beta2!
+    }
+
+    type AddressSpacePlanSpec_admin_enmasse_io_v1beta2 {
+        AddressPlans: [AddressSpacePlan_admin_enmasse_io_v1beta2!]!
+        AddressSpaceType: AddressSpaceType,
+        DisplayName: String!
+        LongDescription: String!
+        ShortDescription: String!
+        DisplayOrder: Int!
+    }
 
 
-  type ObjectMeta_v1 {
-    Annotations: [KeyValue!]!
-    Name: String!
-    Namespace: String!
-    ResourceVersion: String!
-    CreationTimestamp: Date!
-    Uid: ID!
-  }
+    type ObjectMeta_v1 {
+        Annotations: [KeyValue!]!
+        Name: String!
+        Namespace: String!
+        ResourceVersion: String!
+        CreationTimestamp: Date!
+        Age: String!
+        Uid: ID!
+    }
 
-  type User_v1 {
-    Metadata: ObjectMeta_v1!
-    Identities: [String!]!
-    Groups: [String!]!
-  }
+    type User_v1 {
+        Metadata: ObjectMeta_v1!
+        Identities: [String!]!
+        Groups: [String!]!
+    }
 
-  type Namespace_v1 {
-    Metadata: ObjectMeta_v1!
-    Status: NamespaceStatus_v1!
-  }
+    type Namespace_v1 {
+        Metadata: ObjectMeta_v1!
+        Status: NamespaceStatus_v1!
+    }
 
-  type NamespaceStatus_v1 {
-    Phase: String!
-  }
+    type NamespaceStatus_v1 {
+        Phase: String!
+    }
 
-  type Query {
-      hello: String
+    type Query {
+        hello: String
 
-      "Returns the address spaces type defined by the system"
-      addressSpaceTypes: [AddressSpaceType!]!
-      "Returns the address spaces plans defined by the system optionally filtereing for a single address space type"
-      addressSpacePlans(addressSpaceType: AddressSpaceType): [AddressSpacePlan_admin_enmasse_io_v1beta2!]!
+        "Returns the address spaces type defined by the system"
+        addressSpaceTypes: [AddressSpaceType!]!
+        "Returns the address spaces plans defined by the system optionally filtereing for a single address space type"
+        addressSpacePlans(addressSpaceType: AddressSpaceType): [AddressSpacePlan_admin_enmasse_io_v1beta2!]!
 
-      "Returns the address type defined by the system"
-      addressTypes: [AddressType!]!
-      "Returns the address plans defined by the system optionally filtering for a single address space plan"
-      addressPlans(addressSpacePlan: String): [AddressPlan_admin_enmasse_io_v1beta2!]!
+        "Returns the address type defined by the system"
+        addressTypes: [AddressType!]!
+        "Returns the address plans defined by the system optionally filtering for a single address space plan"
+        addressPlans(addressSpacePlan: String): [AddressPlan_admin_enmasse_io_v1beta2!]!
 
-      "Returns the current logged on user"
-      whoami: User_v1!
-      "Returns the namespaces visible to this user"
-      namespaces : [Namespace_v1!]!
+        "Returns the current logged on user"
+        whoami: User_v1!
+        "Returns the namespaces visible to this user"
+        namespaces : [Namespace_v1!]!
 
-      "Returns the address spaces visible to this user,  optionally filtering"
-      addressSpaces(first: Int, offset: Int, filter: String, orderBy: String): AddressSpaceQueryResult
+        "Returns the address spaces visible to this user,  optionally filtering"
+        addressSpaces(first: Int, offset: Int, filter: String, orderBy: String): AddressSpaceQueryResult_consoleapi_enmasse_io_v1beta1
 
-      "Returns the addresses visible to this user,  optionally filtering"
-      addresses(first: Int, offset: Int, filter: String, orderBy: String): AddressQueryResult
+        "Returns the addresses visible to this user,  optionally filtering"
+        addresses(first: Int, offset: Int, filter: String, orderBy: String): AddressQueryResult_consoleapi_enmasse_io_v1beta1
 
-      "Returns the connections visible to this user,  optionally filtering"
-      connections(first: Int, offset: Int, filter: String, orderBy: String): ConnectionQueryResult
-  }
+        "Returns the connections visible to this user,  optionally filtering"
+        connections(first: Int, offset: Int, filter: String, orderBy: String): ConnectionQueryResult_consoleapi_enmasse_io_v1beta1
+    }
 
-  #
-  # Inputs Types
-  #
+    #
+    # Inputs Types
+    #
 
-  input ObjectMeta_v1_Input {
-      Name: String!
-      Namespace: String!
-      ResourceVersion: String
-  }
+    input ObjectMeta_v1_Input {
+        Name: String!
+        Namespace: String!
+        ResourceVersion: String
+    }
 
-  input AddressSpaceSpec_enmasse_io_v1beta1_Input {
-      Type:         String!
-      Plan:         String!
-  }
+    input AddressSpaceSpec_enmasse_io_v1beta1_Input {
+        Type:         String!
+        Plan:         String!
+    }
 
-  input AddressSpace_enmasse_io_v1beta1_Input {
-      Metadata: ObjectMeta_v1_Input
-      Spec: AddressSpaceSpec_enmasse_io_v1beta1_Input
-  }
+    input AddressSpace_enmasse_io_v1beta1_Input {
+        Metadata: ObjectMeta_v1_Input
+        Spec: AddressSpaceSpec_enmasse_io_v1beta1_Input
+    }
 
-  input AddressSpec_enmasse_io_v1beta1_Input {
-      Address:      String!
-      AddressSpace: String
-      Type:         String!
-      Plan:         String!
-      Topic:        String
-  }
+    input AddressSpec_enmasse_io_v1beta1_Input {
+        Address:      String!
+        AddressSpace: String
+        Type:         String!
+        Plan:         String!
+        Topic:        String
+    }
 
-  input Address_enmasse_io_v1beta1_Input {
-      Metadata: ObjectMeta_v1_Input
-      Spec: AddressSpec_enmasse_io_v1beta1_Input
-  }
+    input Address_enmasse_io_v1beta1_Input {
+        Metadata: ObjectMeta_v1_Input
+        Spec: AddressSpec_enmasse_io_v1beta1_Input
+    }
 
-  type Mutation {
-      createAddressSpace(input: AddressSpace_enmasse_io_v1beta1_Input!): AddressSpace_enmasse_io_v1beta1!
-      patchAddressSpace(input: ObjectMeta_v1_Input!, jsonPatch: String!, patchType : String!): AddressSpace_enmasse_io_v1beta1!
-      deleteAddressSpace(input: ObjectMeta_v1_Input!): Boolean
+    type Mutation {
+        createAddressSpace(input: AddressSpace_enmasse_io_v1beta1_Input!): ObjectMeta_v1!
+        patchAddressSpace(input: ObjectMeta_v1_Input!, jsonPatch: String!, patchType : String!): Boolean
+        deleteAddressSpace(input: ObjectMeta_v1_Input!): Boolean
 
-      createAddress(input: Address_enmasse_io_v1beta1_Input!): Address_enmasse_io_v1beta1!
-      patchAddress(input: ObjectMeta_v1_Input!, jsonPatch: String!, patchType : String!): Address_enmasse_io_v1beta1!
-      deleteAddress(input: ObjectMeta_v1_Input!): Boolean
-  }
+        createAddress(input: Address_enmasse_io_v1beta1_Input!): ObjectMeta_v1!
+        patchAddress(input: ObjectMeta_v1_Input!, jsonPatch: String!, patchType : String!): Boolean
+        deleteAddress(input: ObjectMeta_v1_Input!): Boolean
+        purgeAddress(input: ObjectMeta_v1_Input!): Boolean
+
+        closeConnection(input: ObjectMeta_v1_Input!): Boolean
+    }
 `;
 
 module.exports = typeDefs;

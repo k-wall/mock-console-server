@@ -10,13 +10,25 @@ const parser = require('./filter_parser.js');
 const jp = require('jsonpath');
 const firstBy = require('thenby');
 
-// The GraphQL schema
-//const typeDefs = gql`
-//  type Query {
-//    "A simple type for getting started!"
-//    hello: String
-//  }
-//`;
+const TIME_FACTORS = [
+  {
+    timeunit: "week",
+    value: (1000 * 3600 * 24) * 7
+  },
+  {
+    timeunit: "day",
+    value: (1000 * 3600 * 24)
+  },
+  {
+    timeunit: "hour",
+    value: (1000 * 3600)
+  },
+  {
+    timeunit: "mins",
+    value: (1000 * 60)
+  },
+];
+
 function calcLowerUpper(offset, first, len) {
   var lower = 0;
   if (offset !== undefined && offset > 0) {
@@ -48,101 +60,91 @@ const availableNamespaces = [
   }
 ];
 
-const availableAddressPlans = [
-  {
+function createAddressPlan(name, addressType, displayName, shortDescription, longDescription, resources, displayOrder)
+{
+  return {
     Metadata: {
-      Name: "standard-small-queue",
+      Name: name,
+      Uid: uuidv1(),
+      CreationTimestamp: getRandomCreationDate()
     },
     Spec: {
-      AddressType: "queue",
-      DisplayName: "Small Queue",
-      DisplayOrder: 0,
-      LongDescription: "Creates a small queue sharing underlying broker with other queues.",
-      Resources: {
+      AddressType: addressType,
+      DisplayName: displayName,
+      DisplayOrder: displayOrder,
+      LongDescription: longDescription,
+      Resources: resources,
+      "shortDescription": shortDescription
+    }
+  };
+}
+
+const availableAddressPlans = [
+  createAddressPlan("standard-small-queue",
+      "queue",
+      "Small Queue",
+      "Creates a small queue sharing underlying broker with other queues.",
+      "Creates a small queue sharing underlying broker with other queues.",
+      {
         "broker": 0.01,
         "router": 0.001
       },
-      "shortDescription": "Creates a small queue sharing underlying broker with other queues."
-    }
-  },  {
-    Metadata: {
-      Name: "standard-medium-queue",
-    },
-    Spec: {
-      AddressType: "queue",
-      DisplayName: "Medium Queue",
-      DisplayOrder: 1,
-      LongDescription: "Creates a medium sized queue sharing underlying broker with other queues.",
-      Resources: {
-        "broker": 0.1,
-        "router": 0.01
-      },
-      "shortDescription": "Creates a medium sized queue sharing underlying broker with other queues."
-    }
-  },  {
-    Metadata: {
-      Name: "standard-small-anycast",
-    },
-    Spec: {
-      AddressType: "anycast",
-      DisplayName: "Small Anycast",
-      DisplayOrder: 0,
-      LongDescription: "Creates a small anycast address where messages go via a router that does not take ownership of the messages.",
-      Resources: {
+      0),
+  createAddressPlan("standard-medium-queue",
+      "queue",
+      "Medium Queue",
+      "Creates a medium sized queue sharing underlying broker with other queues.",
+      "Creates a medium sized queue sharing underlying broker with other queues.",
+      {
+        "broker": 0.01,
         "router": 0.001
       },
-      "shortDescription": "Creates a small anycast address."
-    }
-  },{
-    Metadata: {
-      Name: "standard-small-multicast",
-    },
-    Spec: {
-      AddressType: "multicast",
-      DisplayName: "Small Multicast",
-      DisplayOrder: 0,
-      LongDescription: "Creates a small multicast address where messages go via a router that does not take ownership of the messages.",
-      Resources: {
+      1),
+  createAddressPlan("standard-small-anycast",
+      "anycast",
+      "Small Anycast",
+      "Creates a small anycast address.",
+      "Creates a small anycast address where messages go via a router that does not take ownership of the messages.",
+      {
         "router": 0.001
       },
-      "shortDescription": "Creates a small multicast address."
-    }
-  },{
-    Metadata: {
-      Name: "brokered-queue",
-    },
-    Spec: {
-      AddressType: "queue",
-      DisplayName: "Brokered Queue",
-      DisplayOrder: 0,
-      LongDescription: "Creates a queue on a broker.",
-      Resources: {
+      2),
+  createAddressPlan("standard-small-multicast",
+      "multicast",
+      "Small Multicast",
+      "Creates a small multicast address.",
+      "Creates a small multicast address where messages go via a router that does not take ownership of the messages.",
+      {
+        "router": 0.001
+      },
+      3),
+  createAddressPlan("brokered-queue",
+      "queue",
+      "Brokered Queue",
+      "Creates a queue on a broker.",
+      "Creates a queue on a broker.",
+      {
         "broker": 0
       },
-      "shortDescription": "Creates a queue on a broker."
-    }
-  },{
-    Metadata: {
-      Name: "brokered-topic",
-    },
-    Spec: {
-      AddressType: "topic",
-      DisplayName: "Brokered Topic",
-      DisplayOrder: 0,
-      LongDescription: "Creates a topic on a broker.",
-      Resources: {
+      0),
+  createAddressPlan("brokered-topic",
+      "topic",
+      "Brokered Topic",
+      "Creates a topic on a broker.",
+      "Creates a topic on a broker.",
+      {
         "broker": 0
       },
-      "shortDescription": "Creates a topic on a broker."
-    }
-  }
+      1)
 ];
 
 
 const availableAddressSpacePlans = [
   {
     Metadata: {
-      Name: "standard-small"
+      Name: "standard-small",
+      Uid: uuidv1(),
+      CreationTimestamp: getRandomCreationDate()
     },
     Spec: {
       AddressSpaceType: "standard",
@@ -160,7 +162,9 @@ const availableAddressSpacePlans = [
   },
   {
     Metadata: {
-      Name: "standard-medium"
+      Name: "standard-medium",
+      Uid: uuidv1(),
+      CreationTimestamp: getRandomCreationDate()
     },
     Spec: {
       AddressSpaceType: "standard",
@@ -178,7 +182,9 @@ const availableAddressSpacePlans = [
   },
   {
     Metadata: {
-      Name: "brokered-single-broker"
+      Name: "brokered-single-broker",
+      Uid: uuidv1(),
+      CreationTimestamp: getRandomCreationDate()
     },
     Spec: {
       AddressSpaceType: "brokered",
@@ -194,9 +200,15 @@ const availableAddressSpacePlans = [
   }
 ];
 
-function getRandomCreationDate()
-{
-  return new Date(new Date().setDate(new Date().getDate() - Math.random() * 3));
+function getRandomCreationDate(floor) {
+
+  var created = new Date().getTime() - (Math.random() * 1000 * 60 * 60 * 24);
+  if (floor && created < floor.getTime()) {
+    created = floor.getTime();
+  }
+  var date = new Date();
+  date.setTime(created);
+  return date;
 }
 
 function createAddressSpace(as) {
@@ -224,7 +236,7 @@ function createAddressSpace(as) {
       Name: as.Metadata.Name,
       Namespace: namespace.Metadata.Name,
       Uid: uuidv1(),
-      CreationTimestamp: getRandomCreationDate()
+      CreationTimestamp: as.Metadata.CreationTimestamp ? as.Metadata.CreationTimestamp : getRandomCreationDate()
     },
     Spec: {
       Plan: spacePlan,
@@ -238,7 +250,7 @@ function createAddressSpace(as) {
   };
 
   addressSpaces.push(addressSpace);
-  return addressSpace;
+  return addressSpace.Metadata;
 }
 
 function patchAddressSpace(metadata, jsonPatch, patchType) {
@@ -255,26 +267,22 @@ function patchAddressSpace(metadata, jsonPatch, patchType) {
   }
 
   var patch = JSON.parse(jsonPatch);
-  var current = addressSpaces[index];
+  var current = addressSpaces[index].Spec;
   var patched = applyPatch(JSON.parse(JSON.stringify(current)) , patch);
   if (patched.newDocument) {
     var replacement = patched.newDocument;
-    if (replacement.Metadata === undefined || replacement.Metadata.Name !== current.Metadata.Name || replacement.Metadata.Namespace !== current.Metadata.Namespace || replacement.Metadata.Uid !== current.Metadata.Uid) {
-      throw `Immutable parts of resource (Address space '${metadata.Name}' in namespace ${metadata.Namespace}) cannot be patched.`
-    }
-
-    if (replacement.Spec.Plan !== current.Spec.Plan) {
-      var replacementPlan = typeof(replacement.Spec.Plan) === "string" ? replacement.Spec.Plan : replacement.Spec.Plan.Metadata.Name;
+    if (replacement.Plan !== current.Plan) {
+      var replacementPlan = typeof(replacement.Plan) === "string" ? replacement.Plan : replacement.Metadata.Name;
       var spacePlan = availableAddressSpacePlans.find(o => o.Metadata.Name === replacementPlan);
       if (spacePlan === undefined) {
         var knownPlansNames = availableAddressSpacePlans.map(p => p.Metadata.Name);
         throw `Unrecognised address space plan '${replacement.Spec.Plan}', known ones are : ${knownPlansNames}`;
       }
-      replacement.Spec.Plan = spacePlan;
+      replacement.Plan = spacePlan;
     }
 
-    addressSpaces[index] = replacement;
-    return replacement;
+    addressSpaces[index].Spec = replacement;
+    return true;
   } else {
     throw `Failed to patch address space with name  '${metadata.Name}' in namespace ${metadata.Namespace}`
   }
@@ -285,6 +293,9 @@ function deleteAddressSpace(metadata) {
   if (index < 0) {
     throw `Address space with name  '${metadata.Name}' in namespace ${metadata.Namespace} does not exist`;
   }
+  var as = addressSpaces[index];
+  delete addressspace_connection[as.Metadata.Uid];
+
   addressSpaces.splice(index, 1);
 }
 
@@ -333,13 +344,24 @@ console.log("patch : %j", compare(addressSpaces[0], addressSpaces[1]));
 var connections = [];
 
 function createConnection(addressSpace, hostname) {
+  var port = Math.floor(Math.random() * 25536) + 40000;
+  var hostport = hostname + ":" + port;
   return {
-    AddressSpace: addressSpace,
-    Hostname: hostname + ":" + (Math.floor(Math.random() * 25536) + 40000),
-    ContainerId: uuidv1() + "",
-    Protocol: "amqp",
-    Properties: [],
-    Metrics: []
+    Metadata: {
+      Name: hostport,
+      Uid: uuidv1() + "",
+      Namespace: addressSpace.Metadata.Namespace,
+      CreationTimestamp: getRandomCreationDate(addressSpace.Metadata.CreationTimestamp)
+    },
+    Spec: {
+      AddressSpace: addressSpace,
+      Hostname: hostport,
+      ContainerId: uuidv1() + "",
+      Protocol: "amqp",
+      Properties: [],
+      Metrics: []
+
+    }
   };
 }
 
@@ -393,7 +415,7 @@ connections = connections.concat(["kosmos",
 
 var addressspace_connection = {};
 addressSpaces.forEach(as => {
-  addressspace_connection[as.Metadata.Uid] = connections.filter((c) => c.AddressSpace.Metadata.Uid === as.Metadata.Uid);
+  addressspace_connection[as.Metadata.Uid] = connections.filter((c) => c.Spec.AddressSpace.Metadata.Uid === as.Metadata.Uid);
 });
 
 var addresses = [];
@@ -437,7 +459,7 @@ function createAddress(addr) {
       Name: addr.Metadata.Name,
       Namespace: addr.Metadata.Namespace,
       Uid: uuidv1(),
-      CreationTimestamp: getRandomCreationDate()
+      CreationTimestamp: addr.Metadata.CreationTimestamp ? addr.Metadata.CreationTimestamp : getRandomCreationDate()
     },
     Spec: {
       Address: addr.Spec.Address,
@@ -450,7 +472,7 @@ function createAddress(addr) {
     }
   };
   addresses.push(address);
-  return address;
+  return address.Metadata;
 }
 
 function patchAddress(metadata, jsonPatch, patchType) {
@@ -467,26 +489,22 @@ function patchAddress(metadata, jsonPatch, patchType) {
   }
 
   var patch = JSON.parse(jsonPatch);
-  var current = addresses[index];
+  var current = addresses[index].Spec;
   var patched = applyPatch(JSON.parse(JSON.stringify(current)) , patch);
   if (patched.newDocument) {
     var replacement = patched.newDocument;
-    if (replacement.Metadata === undefined || replacement.Metadata.Name !== current.Metadata.Name || replacement.Metadata.Namespace !== current.Metadata.Namespace || replacement.Metadata.Uid !== current.Metadata.Uid) {
-      throw `Immutable parts of resource (Address '${metadata.Name}' in namespace ${metadata.Namespace}) cannot be patched.`
-    }
-
-    if (replacement.Spec.Plan !== current.Spec.Plan) {
-      var replacementPlan = typeof(replacement.Spec.Plan) === "string" ? replacement.Spec.Plan : replacement.Spec.Plan.Metadata.Name;
+    if (replacement.Plan !== current.Plan) {
+      var replacementPlan = typeof(replacement.Plan) === "string" ? replacement.Plan : replacement.Plan.Metadata.Name;
       var spacePlan = availableAddressPlans.find(o => o.Metadata.Name === replacementPlan);
       if (spacePlan === undefined) {
         var knownPlansNames = availableAddressPlans.map(p => p.Metadata.Name);
         throw `Unrecognised address plan '${replacement.Spec.Plan}', known ones are : ${knownPlansNames}`;
       }
-      replacement.Spec.Plan = spacePlan;
+      replacement.Plan = spacePlan;
     }
 
-    addresses[index] = replacement;
-    return replacement;
+    addresses[index].Spec = replacement;
+    return true;
   } else {
     throw `Failed to patch address with name  '${metadata.Name}' in namespace ${metadata.Namespace}`
   }
@@ -498,6 +516,30 @@ function deleteAddress(metadata) {
     throw `Address with name  '${metadata.Name}' in namespace ${metadata.Namespace} does not exist`;
   }
   addresses.splice(index, 1);
+}
+
+function purgeAddress(metadata) {
+  var index = addresses.findIndex(existing => metadata.Name === existing.Metadata.Name && metadata.Namespace === existing.Metadata.Namespace);
+  if (index < 0) {
+    throw `Address with name  '${metadata.Name}' in namespace ${metadata.Namespace} does not exist`;
+  }
+}
+
+function closeConnection(metadata) {
+
+  var index = connections.findIndex(existing => metadata.Name === existing.Metadata.Name && metadata.Namespace === existing.Metadata.Namespace);
+  if (index < 0) {
+    throw `Connection with name  '${metadata.Name}' in namespace ${metadata.Namespace} does not exist`;
+  }
+  var targetCon = connections[index];
+
+  var as = connections[index].Spec.AddressSpace;
+  var as_cons = addressspace_connection[as.Metadata.Uid];
+  var as_cons_index = as_cons.findIndex((c) => c === targetCon);
+  as_cons.splice(as_cons_index, 1);
+
+  connections.splice(index, 1);
+
 }
 
 ["ganymede", "callisto", "io", "europa", "amalthea", "himalia", "thebe", "elara", "pasiphae", "metis", "carme", "sinope"].map(n =>
@@ -559,13 +601,17 @@ addressSpaces.forEach((as) => {
 
 var links = [];
 connections.forEach(c => {
-  var addr = addressItrs[c.AddressSpace.Metadata.Uid].next().value;
+  var addr = addressItrs[c.Spec.AddressSpace.Metadata.Uid].next().value;
   links.push(
       {
-        Name: uuidv1(),
-        Connection: c,
-        Address: addr.Metadata.Name,
-        Role: "sender",
+        Metadata: {
+          Name: uuidv1(),
+        },
+        Spec: {
+          Connection: c,
+          Address: addr.Metadata.Name,
+          Role: "sender",
+        }
       });
 });
 
@@ -599,11 +645,18 @@ function buildOrderBy(sort_spec) {
   }
 }
 
+function init(input) {
+  if (input.Metadata) {
+    input.Metadata.CreationTimestamp = new Date();
+  }
+  return input;
+}
+
 // A map of functions which return data for the schema.
 const resolvers = {
   Mutation: {
     createAddressSpace: (parent, args) => {
-      return createAddressSpace(args.input);
+      return createAddressSpace(init(args.input));
     },
     patchAddressSpace: (parent, args) => {
       return patchAddressSpace(args.input, args.jsonPatch, args.patchType);
@@ -613,13 +666,21 @@ const resolvers = {
       return true;
     },
     createAddress: (parent, args) => {
-      return createAddress(args.input);
+      return createAddress(init(args.input));
     },
     patchAddress: (parent, args) => {
       return patchAddress(args.input, args.jsonPatch, args.patchType);
     },
     deleteAddress: (parent, args) => {
       deleteAddress(args.input);
+      return true;
+    },
+    purgeAddress: (parent, args) => {
+      purgeAddress(args.input);
+      return true;
+    },
+    closeConnection: (parent, args) => {
+      closeConnection(args.input);
       return true;
     },
   },
@@ -657,9 +718,7 @@ const resolvers = {
 
       return {
         Total: as.length,
-        AddressSpaces: page.map(as => ({
-          Resource: as,
-        }))
+        AddressSpaces: page
       };
     },
     addresses:(parent, args, context, info) => {
@@ -672,9 +731,7 @@ const resolvers = {
 
       return {
         Total: a.length,
-        Addresses: page.map(a => ({
-          Resource: a,
-        }))
+        Addresses: page
       };
     },
     connections:(parent, args, context, info) => {
@@ -693,12 +750,12 @@ const resolvers = {
     }
   },
 
-  AddressSpace: {
+  AddressSpace_consoleapi_enmasse_io_v1beta1: {
     Connections:(parent, args, context, info) => {
       var filterer = buildFilterer(args.filter);
       var orderBy = buildOrderBy(args.orderBy);
 
-      var as = parent.Resource;
+      var as = parent;
       var cons = as.Metadata.Uid in addressspace_connection ? addressspace_connection[as.Metadata.Uid] : [];
       cons = cons.filter(c => filterer.evaluate(c)).sort(orderBy);
 
@@ -710,7 +767,7 @@ const resolvers = {
       var filterer = buildFilterer(args.filter);
       var orderBy = buildOrderBy(args.orderBy);
 
-      var as = parent.Resource;
+      var as = parent;
 
       var addrs = addresses.filter(
           a => as.Metadata.Namespace === a.Metadata.Namespace && a.Metadata.Name.startsWith(as.Metadata.Name + "."))
@@ -719,12 +776,10 @@ const resolvers = {
       var paginationBounds = calcLowerUpper(args.offset, args.first, addrs.length);
       var page = addrs.slice(paginationBounds.lower, paginationBounds.upper);
       return {Total: addrs.length,
-        Addresses: page.map(a => ({
-          Resource: a,
-        }))};
+        Addresses: page};
     },
     Metrics: (parent, args, context, info) => {
-      var as = parent.Resource;
+      var as = parent;
       var cons = as.Metadata.Uid in addressspace_connection ? addressspace_connection[as.Metadata.Uid] : [];
       var addrs = addresses.filter((a) => as.Metadata.Namespace === a.Metadata.Namespace &&
                                           a.Metadata.Name.startsWith(as.Metadata.Name + "."));
@@ -746,9 +801,9 @@ const resolvers = {
     }
 
   },
-  Address: {
+  Address_consoleapi_enmasse_io_v1beta1: {
     Metrics: (parent, args, context, info) => {
-      var as = parent.Resource;
+      var as = parent;
       var cons = as.Metadata.Uid in addressspace_connection ? addressspace_connection[as.Metadata.Uid] : [];
       var addrs = addresses.filter((a) => as.Metadata.Namespace === a.Metadata.Namespace &&
                                           a.Metadata.Name.startsWith(as.Metadata.Name + "."));
@@ -791,8 +846,8 @@ const resolvers = {
       var filterer = buildFilterer(args.filter);
       var orderBy = buildOrderBy(args.orderBy);
 
-      var addr = parent.Resource;
-      var addrlinks = links.filter((l) => l.Connection.AddressSpace.Metadata.Namespace === addr.Metadata.Namespace &&   addr.Metadata.Name.startsWith(l.Connection.AddressSpace.Metadata.Name + "."))
+      var addr = parent;
+      var addrlinks = links.filter((l) => l.Spec.Connection.Spec.AddressSpace.Metadata.Namespace === addr.Metadata.Namespace &&   addr.Metadata.Name.startsWith(l.Spec.Connection.Spec.AddressSpace.Metadata.Name + "."))
           .filter(l => filterer.evaluate(l)).sort(orderBy);
 
       var paginationBounds = calcLowerUpper(args.offset, args.first, addrlinks.length);
@@ -803,15 +858,14 @@ const resolvers = {
         Links: page
       };
     },
-
   },
-  Connection: {
+  Connection_consoleapi_enmasse_io_v1beta1: {
     Links: (parent, args, context, info) => {
       var filterer = buildFilterer(args.filter);
       var orderBy = buildOrderBy(args.orderBy);
 
       var con = parent;
-      var connlinks = links.filter((l) => l.Connection === con).filter(l => filterer.evaluate(l)).sort(orderBy);
+      var connlinks = links.filter((l) => l.Spec.Connection === con).filter(l => filterer.evaluate(l)).sort(orderBy);
 
       var paginationBounds = calcLowerUpper(args.offset, args.first, connlinks.length);
       var page = connlinks.slice(paginationBounds.lower, paginationBounds.upper);
@@ -838,16 +892,17 @@ const resolvers = {
       ];
     }
   },
-  Link: {
+  Link_consoleapi_enmasse_io_v1beta1: {
     Metrics: (parent, args, context, info) => {
       var nodes = traverse(info.path).nodes().filter(n => typeof(n) === "object");
       var is_addr_query = nodes.find(n =>  "key" in n && n["key"] === "Addresses") !== undefined;
 
+      var link = parent;
       if (is_addr_query) {
 
         return [
           {
-            Name: parent.Role === "sender" ? "enmasse_messages_in" : "enmasse_messages_out",
+            Name: link.Spec.Role === "sender" ? "enmasse_messages_in" : "enmasse_messages_out",
             Type: "rate",
             Value: Math.floor(Math.random() * 10),
             Units: "msg/s"
@@ -861,7 +916,7 @@ const resolvers = {
         ];
       } else {
 
-        var as = parent.Connection.AddressSpace;
+        var as = link.Spec.Connection.Spec.AddressSpace;
         if (as.Spec.Type === "brokered") {
           return [
             {
@@ -915,6 +970,29 @@ const resolvers = {
       }
     }
 
+  },
+  ObjectMeta_v1 : {
+    Age: (parent, args, context, info) => {
+      var meta = parent;
+      var now = new Date().getTime();
+      var diff = now - meta.CreationTimestamp.getTime();
+
+      if (diff > 0) {
+        for (var f of TIME_FACTORS) {
+
+          var quotient = Math.floor(diff / f.value);
+          if (quotient > 0) {
+            return quotient + " " + f.timeunit + (quotient > 1 ? "s" : "") + " ago";
+          }
+        }
+      }
+
+      return "A few moments ago";
+    },
+    CreationTimestamp: (parent, args, context, info) => {
+      var meta = parent;
+      return meta.CreationTimestamp;
+    }
   }
 };
 

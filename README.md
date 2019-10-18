@@ -1,12 +1,14 @@
 # mock-console-server
+
 EnMasse mock console server that serves a static data-set comprising two namespaces, three address spaces, and many
-addresses of different types.
+addresses of different types.  Address spaces and address can be created, patched or deleted.
+Addresses can be purged.  Connections can be closed.
 
-The mock is not yet complete.  Currently following major features are missing:
+TODO:
+* How do we signal to the console, in a data driven way, if the user is able to purge an address?
+This may be due to restrictions on the type of object itself (ie. cast address can't be purged), or
+this user does not have permision.
 
-* sorting
-* mutations for purging an address and closing a connection.
-* the structure of the object beneath connections and links feels ugly
 
 # Running
 
@@ -48,6 +50,13 @@ A two clause sort:
 "`$.Spec.Type` ,`$.Metadata.Name` desc"
 ```
 
+# Paging
+
+The queries that may return a large result accept pagination.  The pagination
+arguments are `first` which specifies the number of rows to be returned and `offset`
+the starting index within the result set.  The object return provides a count
+of the number of rows in the result set in total.
+
 # Example Queries
 
 
@@ -58,25 +67,23 @@ query all_address_spaces {
   addressSpaces {
     Total
     AddressSpaces {
-      Resource {
-        Metadata {
-          Namespace
-          Name
-          CreationTimestamp
-        }
-        Spec {
-          Type
-          Plan {
-            Spec {
-              DisplayName
-            }
+      Metadata {
+        Namespace
+        Name
+        CreationTimestamp
+        Age
+      }
+      Spec {
+        Type
+        Plan {
+          Spec {
+            DisplayName
           }
         }
-        Status {
-          IsReady
-          Messages
-        }
-        
+      }
+      Status {
+        IsReady
+        Messages
       }
     }
   }
@@ -87,26 +94,26 @@ query all_address_spaces {
 
 ```
 query all_addresses_for_addressspace_view {
-  addresses(filter:"`$.Spec.AddressSpace` = 'jupiter_as1' AND `$.Metadata.Namespace` = 'app1_ns'") {
+  addresses(
+    filter: "`$.Spec.AddressSpace` = 'jupiter_as1' AND `$.Metadata.Namespace` = 'app1_ns'"
+  ) {
     Total
     Addresses {
-      Resource {
-        Metadata {
-          Namespace
-          Name
-        }
-        Spec {
-          Address
-          Plan {
-            Spec {
-              DisplayName
-            }
+      Metadata {
+        Namespace
+        Name
+      }
+      Spec {
+        Address
+        Plan {
+          Spec {
+            DisplayName
           }
         }
-        Status {
-          IsReady
-          Messages
-        }
+      }
+      Status {
+        IsReady
+        Messages
       }
       Metrics {
         Name
@@ -117,18 +124,25 @@ query all_addresses_for_addressspace_view {
     }
   }
 }
+
 ```
 
 ## all_connections_for_addressspace_view
 
 ```
 query all_connections_for_addressspace_view {
-  connections(filter:"`$.AddressSpace.Metadata.Name` = 'jupiter_as1' AND `$.AddressSpace.Metadata.Namespace` = 'app1_ns'") {
+  connections(
+    filter: "`$.Spec.AddressSpace.Metadata.Name` = 'jupiter_as1' AND `$.Spec.AddressSpace.Metadata.Namespace` = 'app1_ns'"
+  ) {
     Total
     Connections {
-      Hostname
-      ContainerId
-      Protocol
+      Metadata {
+        Name
+      }
+      Spec {
+        Hostname
+        ContainerId
+        Protocol
       }
     }
   }
@@ -140,21 +154,15 @@ query all_connections_for_addressspace_view {
 
 ## Create address space
 
+To create an address space, pass an input object describing the address space
+to be created.  The return value is the new address space's metadata.
+
 ```
-mutation create_as($a:AddressSpace_enmasse_io_v1beta1_Input!) {
-  createAddressSpace(input:$a) {
-    Metadata {
-      Name
-      CreationTimestamp
-      Uid
-    }
-    Spec {
-      Plan {
-        Metadata {
-          Name
-        }
-      }
-    }
+mutation create_as($a: AddressSpace_enmasse_io_v1beta1_Input!) {
+  createAddressSpace(input: $a) {
+    Name
+    Uid
+    CreationTimestamp
   }
 }
 ```
@@ -170,8 +178,11 @@ args:
 
 ## Patch address space
 
-NOTE: patch operation requires a JSON patch of the resource to be updated. The patch itself
-is a stringify JSON list. The mock server currently implements RFC 6902 application/json-patch+json.
+To patch an address space, pass the input object corresponding to the address space's
+metadata and a JSON patch of the resource's spec describing the update
+to be made.
+ 
+ The mock server currently implements RFC 6902 application/json-patch+json.
 
 ```
 mutation patch_as(
@@ -179,19 +190,7 @@ mutation patch_as(
   $jsonPatch: String!
   $patchType: String!
 ) {
-  patchAddressSpace(input: $a, jsonPatch: $jsonPatch, patchType: $patchType) {
-    Metadata {
-      Name
-      Uid
-    }
-    Spec {
-      Plan {
-        Metadata {
-          Name
-        }
-      }
-    }
-  }
+  patchAddressSpace(input: $a, jsonPatch: $jsonPatch, patchType: $patchType)
 }
 ```
 
@@ -200,16 +199,17 @@ args:
 ```
 {
   "a": {"Name": "wibx", "Namespace": "app1_ns" },
-"jsonPatch": "[{\"op\":\"replace\",\"path\":\"/Spec/Plan\",\"value\":\"standard-medium\"}]",
+"jsonPatch": "[{\"op\":\"replace\",\"path\":\"/Plan\",\"value\":\"standard-medium\"}]",
   "patchType": "application/json-patch+json"
   
 
 }
 ```
 
-
 ## Delete address space
 
+To delete an address space, call `deleteAddressSpace` passing the Metadata
+object associated with the address to delete.
 
 ```
 mutation delete_as($a:ObjectMeta_v1_Input!) {
@@ -252,28 +252,17 @@ args:
 
 # Patch address
 
+To patch an address, pass the input object corresponding to the address
+metadata and a JSON patch of the resource's spec describing the update
+to be made.
+
 ```
 mutation patch_addr(
   $a: ObjectMeta_v1_Input!
   $jsonPatch: String!
   $patchType: String!
 ) {
-  patchAddress(input: $a, jsonPatch: $jsonPatch, patchType: $patchType) {
-    Metadata {
-      Name
-      Namespace
-      Uid
-      CreationTimestamp
-    }
-    Spec {
-      Type
-      Plan {
-        Metadata {
-          Name
-        }
-      }
-    }
-  }
+  patchAddress(input: $a, jsonPatch: $jsonPatch, patchType: $patchType)
 }
 ```
 
@@ -289,6 +278,10 @@ args:
 
 # Delete address
 
+To delete an address, call `deleteAddress` passing the Metadata
+object associated with the address to delete.
+
+
 ```
 mutation delete_addr($a:ObjectMeta_v1_Input!) {
   deleteAddress(input:$a)
@@ -299,5 +292,44 @@ args:
 ```
 {
   "a": {"Name": "jupiter_as1.wiby1", "Namespace": "app1_ns" }
+}
+```
+
+
+# Purging address
+
+To purge an address (i.e clear it of its messages), call `purgeAddress` passing the Metadata
+object associated with the address to purge.
+
+```
+mutation purge_addr($a:ObjectMeta_v1_Input!) {
+  purgeAddress(input:$a)
+}
+```
+
+args:
+```
+{
+  "a": {"Name": "jupiter_as1.wiby1", "Namespace": "app1_ns" }
+}
+```
+
+
+# Closing connection
+
+To close a connection, call `closeConnection` passing the Metadata
+object associated with the connection to close.
+
+```
+mutation close_conn($c:ObjectMeta_v1_Input!) {
+  closeConnection(input:$c)
+}
+```
+
+args:
+
+```
+{
+  "c": {"Name": "cassini:55596", "Namespace": "app1_ns" }
 }
 ```
