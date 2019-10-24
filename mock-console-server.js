@@ -10,25 +10,6 @@ const parser = require('./filter_parser.js');
 const jp = require('jsonpath');
 const firstBy = require('thenby');
 
-const TIME_FACTORS = [
-  {
-    timeunit: "week",
-    value: (1000 * 3600 * 24) * 7
-  },
-  {
-    timeunit: "day",
-    value: (1000 * 3600 * 24)
-  },
-  {
-    timeunit: "hour",
-    value: (1000 * 3600)
-  },
-  {
-    timeunit: "mins",
-    value: (1000 * 60)
-  },
-];
-
 function calcLowerUpper(offset, first, len) {
   var lower = 0;
   if (offset !== undefined && offset > 0) {
@@ -972,23 +953,6 @@ const resolvers = {
 
   },
   ObjectMeta_v1 : {
-    Age: (parent, args, context, info) => {
-      var meta = parent;
-      var now = new Date().getTime();
-      var diff = now - meta.CreationTimestamp.getTime();
-
-      if (diff > 0) {
-        for (var f of TIME_FACTORS) {
-
-          var quotient = Math.floor(diff / f.value);
-          if (quotient > 0) {
-            return quotient + " " + f.timeunit + (quotient > 1 ? "s" : "") + " ago";
-          }
-        }
-      }
-
-      return "A few moments ago";
-    },
     CreationTimestamp: (parent, args, context, info) => {
       var meta = parent;
       return meta.CreationTimestamp;

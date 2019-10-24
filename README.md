@@ -7,7 +7,7 @@ Addresses can be purged.  Connections can be closed.
 TODO:
 * How do we signal to the console, in a data driven way, if the user is able to purge an address?
 This may be due to restrictions on the type of object itself (ie. cast address can't be purged), or
-this user does not have permision.
+this user does not have permission.
 
 
 # Running
@@ -71,7 +71,6 @@ query all_address_spaces {
         Namespace
         Name
         CreationTimestamp
-        Age
       }
       Spec {
         Type

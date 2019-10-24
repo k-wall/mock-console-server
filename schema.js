@@ -181,7 +181,6 @@ const typeDefs = gql`
         Namespace: String!
         ResourceVersion: String!
         CreationTimestamp: Date!
-        Age: String!
         Uid: ID!
     }
 
