@@ -157,8 +157,8 @@ To create an address space, pass an input object describing the address space
 to be created.  The return value is the new address space's metadata.
 
 ```
-mutation create_as($a: AddressSpace_enmasse_io_v1beta1_Input!) {
-  createAddressSpace(input: $a) {
+mutation create_as($as: AddressSpace_enmasse_io_v1beta1_Input!) {
+  createAddressSpace(input: $as) {
     Name
     Uid
     CreationTimestamp
@@ -170,7 +170,7 @@ args:
 
 ```
 {
-  "a": { "Metadata": {"Name": "wibx", "Namespace": "app1_ns" },
+  "as": { "Metadata": {"Name": "wibx", "Namespace": "app1_ns" },
     "Spec": {"Type": "standard", "Plan": "standard-small"}}
 }
 ```
@@ -330,5 +330,41 @@ args:
 ```
 {
   "c": {"Name": "cassini:55596", "Namespace": "app1_ns" }
+}
+```
+
+# Messaging Certificate For Address Space
+
+To get the messaging certificate for an existing address space.
+
+```
+query xx($as:ObjectMeta_v1_Input!) {
+  messagingCertificateChain(input :$as)
+}
+```
+
+```
+{
+  "as": {"Name": "cassini:55596", "Namespace": "app1_ns" }
+}
+```
+
+# Address Space / Address Command
+
+To get the equivalent command line that, if run, would cause the given address space to be created.
+The addressCommand works in the same manner, but for addresses.
+
+```
+query cmd($as: AddressSpace_enmasse_io_v1beta1_Input!) {
+  addressSpaceCommand(input:$as)
+}
+```
+
+args:
+
+```
+{
+  "as": { "Metadata": {"Name": "wibx", "Namespace": "app1_ns" },
+    "Spec": {"Type": "standard", "Plan": "standard-small", "Address" :"wibx"}}
 }
 ```

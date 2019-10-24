@@ -668,6 +668,48 @@ const resolvers = {
   Query: {
     hello: () => 'world',
 
+    messagingCertificateChain: () => `-----BEGIN CERTIFICATE-----
+MIICLDCCAdKgAwIBAgIBADAKBggqhkjOPQQDAjB9MQswCQYDVQQGEwJCRTEPMA0G
+A1UEChMGR251VExTMSUwIwYDVQQLExxHbnVUTFMgY2VydGlmaWNhdGUgYXV0aG9y
+aXR5MQ8wDQYDVQQIEwZMZXV2ZW4xJTAjBgNVBAMTHEdudVRMUyBjZXJ0aWZpY2F0
+ZSBhdXRob3JpdHkwHhcNMTEwNTIzMjAzODIxWhcNMTIxMjIyMDc0MTUxWjB9MQsw
+CQYDVQQGEwJCRTEPMA0GA1UEChMGR251VExTMSUwIwYDVQQLExxHbnVUTFMgY2Vy
+dGlmaWNhdGUgYXV0aG9yaXR5MQ8wDQYDVQQIEwZMZXV2ZW4xJTAjBgNVBAMTHEdu
+dVRMUyBjZXJ0aWZpY2F0ZSBhdXRob3JpdHkwWTATBgcqhkjOPQIBBggqhkjOPQMB
+BwNCAARS2I0jiuNn14Y2sSALCX3IybqiIJUvxUpj+oNfzngvj/Niyv2394BWnW4X
+uQ4RTEiywK87WRcWMGgJB5kX/t2no0MwQTAPBgNVHRMBAf8EBTADAQH/MA8GA1Ud
+DwEB/wQFAwMHBgAwHQYDVR0OBBYEFPC0gf6YEr+1KLlkQAPLzB9mTigDMAoGCCqG
+SM49BAMCA0gAMEUCIDGuwD1KPyG+hRf88MeyMQcqOFZD0TbVleF+UsAGQ4enAiEA
+l4wOuDwKQa+upc8GftXE2C//4mKANBC6It01gUaTIpo=
+-----END CERTIFICATE-----`,
+
+    addressSpaceCommand: (parent, args, context, info) => {
+      return `apiVersion: enmasse.io/v1beta1
+oc apply -f - << EOF
+kind: AddressSpace
+metadata:
+  name: ${args.input.Metadata.Name}
+spec:
+  type: ${args.input.Spec.Type}
+  plan: ${args.input.Spec.Plan}
+EOF
+`;
+    },
+
+    addressCommand: (parent, args, context, info) => {
+      return `apiVersion: enmasse.io/v1beta1
+oc apply -f - << EOF
+kind: Address
+metadata:
+  name: ${args.input.Metadata.Name}
+spec:
+  address: ${args.input.Spec.Address}
+  type: ${args.input.Spec.Type}
+  plan: ${args.input.Spec.Plan}
+EOF
+`;
+    },
+
     namespaces: () => availableNamespaces,
 
     addressTypes: () => (['queue', 'topic', 'subscription', 'multicast', 'anycast']),

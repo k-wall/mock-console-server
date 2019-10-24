@@ -225,6 +225,15 @@ const typeDefs = gql`
 
         "Returns the connections visible to this user,  optionally filtering"
         connections(first: Int, offset: Int, filter: String, orderBy: String): ConnectionQueryResult_consoleapi_enmasse_io_v1beta1
+
+        "Returns the messaging certificate chain for the address space identifed by input, PEM format, suitable to be offered as a download to the user"
+        messagingCertificateChain(input: ObjectMeta_v1_Input!): String!
+
+        "Returns the command-line that, if executed, would create the given address space"
+        addressSpaceCommand(input: AddressSpace_enmasse_io_v1beta1_Input!): String!
+
+        "Returns the command-line command, if executed, would create the given address"
+        addressCommand(input: Address_enmasse_io_v1beta1_Input!): String!
     }
 
     #
